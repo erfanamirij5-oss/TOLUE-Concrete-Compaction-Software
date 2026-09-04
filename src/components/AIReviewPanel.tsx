@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ConcreteProject } from '../domain/project';
+import { PRODUCT_IDENTITY, type ConcreteProject } from '../domain/project';
 import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
 import type { DiagnosticSummary } from '../engineering/diagnostics';
 import type { PackingResult } from '../engineering/packing';
@@ -38,6 +38,7 @@ export function AIReviewPanel(props: Props) {
         <button onClick={() => navigator.clipboard.writeText(payload.compactData)}>COPY DATA ONLY</button>
       </div>
       <p className="ai-image-note">Image workflow: attach the 3D snapshot, section image or laboratory photograph together with this prompt in the selected AI service. The prompt explicitly instructs the model to separate visual evidence from numerical/model evidence.</p>
+      <p className="ai-image-note">{PRODUCT_IDENTITY.designer} • {PRODUCT_IDENTITY.phone} • {PRODUCT_IDENTITY.email} • {PRODUCT_IDENTITY.website}</p>
     </div>
   );
 }
