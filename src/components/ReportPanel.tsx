@@ -2,7 +2,10 @@ import type { ConcreteProject } from '../domain/project';
 import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
 import type { DiagnosticSummary } from '../engineering/diagnostics';
 import type { PackingResult } from '../engineering/packing';
-import { downloadSnapshot, exportAIAnalysisPackage, exportEngineeringReport } from '../services/reportExport';
+import { evaluateCompaction } from '../engineering/compaction';
+import { evaluateFinalAssessment } from '../engineering/finalAssessment';
+import { evaluateReferenceCompliance } from '../engineering/referenceCompliance';
+import { downloadSnapshot, exportAIAnalysisPackage, exportEngineeringReport, exportProjectAssessmentCsv, exportProjectAssessmentReport } from '../services/reportExport';
 
 interface Props {
   project: ConcreteProject;
@@ -15,19 +18,23 @@ interface Props {
 
 export function ReportPanel(props: Props) {
   const context = { project: props.project, mix: props.mix, analysis: props.analysis, packing: props.packing, diagnostics: props.diagnostics };
-  return <div className="editor-overlay report-panel">
-    <div className="editor-header"><div><b>REPORT & EVIDENCE EXPORT</b><span>Project report, 3D snapshots and AI-ready engineering package</span></div><button onClick={props.onClose}>×</button></div>
+  const compliance=evaluateReferenceCompliance(props.mix);
+  const completed=evaluateCompaction(props.packing,1);
+  const final=evaluateFinalAssessment(props.mix,props.analysis,props.packing,props.diagnostics,compliance,completed);
+  return <div className="editor-overlay report-panel" dir="rtl">
+    <div className="editor-header"><div><b>خروجی و گزارش مهندسی</b><span>گزارش تکی، رتبه‌بندی همه طرح‌ها، تصویر سه‌بعدی و بسته تحلیل AI</span></div><button onClick={props.onClose}>×</button></div>
     <div className="report-summary-grid">
-      <div><span>Project</span><b>{props.project.metadata.projectNumber}</b><small>{props.project.metadata.name}</small></div>
-      <div><span>Mix</span><b>{props.mix.name}</b><small>{props.project.mixes.length} mixes in project</small></div>
-      <div><span>Diagnostic score</span><b>{props.diagnostics.score}/100</b><small>{props.diagnostics.critical} critical • {props.diagnostics.warnings} warning</small></div>
-      <div><span>Packing estimate</span><b>{(props.packing.packingDensity * 100).toFixed(1)}%</b><small>{props.packing.method}</small></div>
+      <div><span>پروژه</span><b>{props.project.metadata.projectNumber}</b><small>{props.project.metadata.name}</small></div>
+      <div><span>طرح فعال</span><b>{props.mix.name}</b><small>{props.project.mixes.length} طرح در پروژه</small></div>
+      <div><span>امتیاز نهایی</span><b>{final.score}/100</b><small>{final.rankFa} • {final.labelFa}</small></div>
+      <div><span>تراکم مؤثر</span><b>{final.effectiveCompactionScore}/100</b><small>مدل مهندسی داخلی TOLUE</small></div>
     </div>
     <div className="report-export-cards">
-      <article><b>ENGINEERING REPORT</b><p>Creates a branded HTML report containing project metadata, mix table, volumetric metrics, diagnostics, model notice and current 3D snapshot. It can be opened in a browser and printed to PDF.</p><button className="primary-action" onClick={() => exportEngineeringReport(context)}>EXPORT REPORT</button></article>
-      <article><b>3D / SECTION SNAPSHOT</b><p>Exports the currently visible Three.js canvas as PNG. In Compare Mode both visible specimens are exported as separate snapshots.</p><button onClick={() => downloadSnapshot(`${props.project.metadata.projectNumber}-${props.mix.name}`)}>EXPORT PNG</button></article>
-      <article><b>AI ANALYSIS PACKAGE</b><p>Creates one JSON package with complete mix input, derived engineering metrics, diagnostics, macro-prompt, product identity and current rendered snapshot(s).</p><button onClick={() => exportAIAnalysisPackage(context)}>EXPORT AI PACKAGE</button></article>
+      <article><b>گزارش تکی طرح</b><p>گزارش کامل همین طرح شامل نمره نهایی از ۱۰۰، سطح A تا E، دانه‌بندی، بسته‌بندی، تراکم مؤثر، هشدارها، جدول مصالح و تصویر سه‌بعدی.</p><button className="primary-action" onClick={() => exportEngineeringReport(context)}>خروجی گزارش تکی</button></article>
+      <article><b>گزارش تجمیعی همه طرح‌ها</b><p>تمام طرح‌های پروژه با Seed و سناریوی یکسان ارزیابی و از بهترین تا ضعیف‌ترین رتبه‌بندی می‌شوند؛ میانگین پروژه و بهترین/ضعیف‌ترین طرح نیز مشخص می‌شود.</p><button className="primary-action" onClick={() => exportProjectAssessmentReport(props.project)}>خروجی رتبه‌بندی پروژه</button><button onClick={() => exportProjectAssessmentCsv(props.project)}>خروجی CSV برای Excel</button></article>
+      <article><b>تصویر سه‌بعدی / مقطع</b><p>نمای فعلی Three.js را به PNG تبدیل می‌کند. در حالت مقایسه، هر نمونه به‌صورت تصویر جداگانه خروجی می‌شود.</p><button onClick={() => downloadSnapshot(`${props.project.metadata.projectNumber}-${props.mix.name}`)}>خروجی PNG</button></article>
+      <article><b>بسته تحلیل هوش مصنوعی</b><p>فایل JSON شامل ورودی کامل طرح، نمره نهایی، شاخص‌های مهندسی، هشدارها، هویت محصول، Prompt و تصاویر فعلی ایجاد می‌شود.</p><button onClick={() => exportAIAnalysisPackage(context)}>خروجی بسته AI</button></article>
     </div>
-    <div className="ai-review-warning">Engineering report outputs must distinguish measured test results from heuristic/model estimates. Current RSA packing and compaction values are not yet validated DEM or laboratory measurements.</div>
+    <div className="ai-review-warning">نمره نهایی و سطح‌بندی فعلی، شاخص مهندسی داخلی TOLUE است. خروجی باید مقادیر مدل/Heuristic را از نتایج واقعی آزمایشگاهی و کنترل استاندارد رسمی جدا نگه دارد.</div>
   </div>;
 }
