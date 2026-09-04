@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CompareMode } from './components/CompareMode';
 import { ConcreteCube } from './components/ConcreteCube';
+import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { GradationEditor } from './components/GradationEditor';
 import { MixDesignEditor } from './components/MixDesignEditor';
 import { analyzeMix } from './engineering/analyzeMix';
@@ -8,6 +9,7 @@ import { analyzeGradation } from './engineering/gradation';
 import { generatePacking } from './engineering/packing';
 import { evaluateCompaction } from './engineering/compaction';
 import { compareMixes, createVariantMix } from './engineering/comparison';
+import { diagnoseMix } from './engineering/diagnostics';
 import { defaultMix, type MixDesign } from './domain/mixDesign';
 import { defaultViewControls, type SectionAxis, type ViewControls } from './domain/viewControls';
 
@@ -36,10 +38,13 @@ export function App() {
   const compactionA = useMemo(() => evaluateCompaction(packingA, compactionProgress), [packingA, compactionProgress]);
   const compactionB = useMemo(() => evaluateCompaction(packingB, compactionProgress), [packingB, compactionProgress]);
   const comparison = useMemo(() => compareMixes(analysisA, packingA, analysisB, packingB), [analysisA, analysisB, packingA, packingB]);
+  const diagnosticsA = useMemo(() => diagnoseMix(mixA, analysisA, packingA), [mixA, analysisA, packingA]);
+  const diagnosticsB = useMemo(() => diagnoseMix(mixB, analysisB, packingB), [mixB, analysisB, packingB]);
 
   const analysis = activeMix === 'A' ? analysisA : analysisB;
   const packing = activeMix === 'A' ? packingA : packingB;
   const compaction = activeMix === 'A' ? compactionA : compactionB;
+  const diagnostics = activeMix === 'A' ? diagnosticsA : diagnosticsB;
   const gradationAnalyses = useMemo(() => mix.gradations.map(analyzeGradation), [mix.gradations]);
   const gradationsValid = gradationAnalyses.every((item) => item.valid);
 
@@ -95,6 +100,7 @@ export function App() {
           <div className="tree">⬡ Compaction Simulation</div>
           <div className="tree">◩ Section / Visibility</div>
           <button className="tree tree-button" onClick={() => setWorkspaceMode(workspaceMode === 'compare' ? 'single' : 'compare')}>⇄ Comparison <span>{workspaceMode === 'compare' ? 'ON' : ''}</span></button>
+          <div className="tree">⚠ Diagnostics</div>
           <div className="tree">▤ Reports</div>
         </aside>
 
@@ -124,6 +130,13 @@ export function App() {
           {workspaceMode === 'compare' ? (
             <>
               <div className="status-card"><span>Comparison</span><strong className="ok">A ↔ B LIVE</strong></div>
+              <div className="panel-title secondary">DIAGNOSTIC SCORE</div>
+              <div className="diagnostic-score-compare">
+                <div><span>MIX A</span><b>{diagnosticsA.score}</b><small>{diagnosticsA.critical} critical / {diagnosticsA.warnings} warning</small></div>
+                <div><span>MIX B</span><b>{diagnosticsB.score}</b><small>{diagnosticsB.critical} critical / {diagnosticsB.warnings} warning</small></div>
+              </div>
+              <DiagnosticsPanel title="Mix A diagnostics" summary={diagnosticsA} compact />
+              <DiagnosticsPanel title="Mix B diagnostics" summary={diagnosticsB} compact />
               <div className="panel-title secondary">KEY DIFFERENCES</div>
               <div className="volume-list">
                 {comparison.slice(0, 6).map((item) => <div className="volume-row" key={item.key}><span>{item.label}</span><b>{item.delta >= 0 ? '+' : ''}{item.delta.toFixed(item.unit === '%' ? 1 : 3)} {item.unit}</b></div>)}
@@ -138,6 +151,8 @@ export function App() {
               <div className="status-card gradation-status"><span>Gradation / volume</span><strong className={gradationsValid && volumeOk ? 'ok' : 'warn'}>{gradationsValid && volumeOk ? 'READY' : 'REVIEW INPUT'}</strong></div>
               <div className="compaction-progress"><i style={{ width: `${compaction.progress * 100}%` }} /></div>
               <div className="metric-grid">{metrics.map(([name, value]) => <div className="metric" key={name}><span>{name}</span><b>{value}</b></div>)}</div>
+              <div className="panel-title secondary">ENGINEERING DIAGNOSTICS</div>
+              <DiagnosticsPanel title={`Mix ${activeMix}`} summary={diagnostics} />
             </>
           )}
 
@@ -156,7 +171,7 @@ export function App() {
         </aside>
       </section>
 
-      <footer className="statusbar"><span>TOLUE Concrete Compaction v0.1.0-alpha</span><span>{workspaceMode === 'compare' ? 'COMPARE: TWO LIVE 1 m³ SPECIMENS + DELTA METRICS' : 'INSPECTION: CUT PLANE + GHOST + PHASE VISIBILITY'}</span></footer>
+      <footer className="statusbar"><span>TOLUE Concrete Compaction v0.1.0-alpha</span><span>{workspaceMode === 'compare' ? 'COMPARE: TWO LIVE 1 m³ SPECIMENS + DIAGNOSTIC DELTA' : 'ENGINEERING DIAGNOSTICS: RULE-BASED V1'}</span></footer>
     </main>
   );
 }
