@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { AggregateMaterialKey, GradationCurve, MixDesign } from '../domain/mixDesign';
 import { analyzeMix } from '../engineering/analyzeMix';
+import { analyzeCombinedGradation } from '../engineering/combinedGradation';
+import { evaluateEffectiveCompaction } from '../engineering/effectiveCompaction';
 import { analyzeGradation } from '../engineering/gradation';
+import { generatePacking } from '../engineering/packing';
 import { CombinedGradationPanel } from './CombinedGradationPanel';
+import { EffectiveCompactionPanel } from './EffectiveCompactionPanel';
 
 interface Props { mix: MixDesign; onChange: (mix: MixDesign) => void; onClose: () => void; }
 
@@ -17,6 +21,9 @@ export function GradationEditor({ mix, onChange, onClose }: Props) {
   const curve = mix.gradations.find((item) => item.materialKey === activeKey) ?? mix.gradations[0];
   const analysis = useMemo(() => analyzeGradation(curve), [curve]);
   const mixAnalysis = useMemo(() => analyzeMix(mix), [mix]);
+  const combined = useMemo(() => analyzeCombinedGradation(mix, mixAnalysis), [mix, mixAnalysis]);
+  const packing = useMemo(() => generatePacking(mix, mixAnalysis, 20260905), [mix, mixAnalysis]);
+  const effectiveCompaction = useMemo(() => evaluateEffectiveCompaction(mixAnalysis, packing, combined), [mixAnalysis, packing, combined]);
 
   const updateCurve = (nextCurve: GradationCurve) => onChange({ ...mix, gradations: mix.gradations.map((item) => item.materialKey === nextCurve.materialKey ? nextCurve : item) });
   const updatePoint = (index: number, field: 'sieveMm' | 'passingPercent', value: number) => updateCurve({ ...curve, points: curve.points.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point) });
@@ -45,6 +52,7 @@ export function GradationEditor({ mix, onChange, onClose }: Props) {
     })}</tbody></table></div>
     {!analysis.valid && <div className="gradation-errors">{analysis.errors.map((error) => <div key={error}>• {error}</div>)}</div>}
     <CombinedGradationPanel mix={mix} analysis={mixAnalysis} />
+    <EffectiveCompactionPanel result={effectiveCompaction} />
     <div className="editor-actions"><button onClick={addPoint}>+ افزودن الک</button><button className="primary-action" onClick={onClose}>اعمال دانه‌بندی</button></div>
   </div>;
 }
