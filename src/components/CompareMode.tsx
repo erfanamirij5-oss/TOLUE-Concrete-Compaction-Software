@@ -3,48 +3,9 @@ import type { ViewControls } from '../domain/viewControls';
 import type { CompactionState } from '../engineering/compaction';
 import type { ComparisonMetric } from '../engineering/comparison';
 import type { PackingResult } from '../engineering/packing';
+import type { ComplianceSummary } from '../engineering/referenceCompliance';
 import { ConcreteCube } from './ConcreteCube';
 
-interface Props {
-  mixA: MixDesign;
-  mixB: MixDesign;
-  analysisA: MixAnalysis;
-  analysisB: MixAnalysis;
-  packingA: PackingResult;
-  packingB: PackingResult;
-  compactionA: CompactionState;
-  compactionB: CompactionState;
-  view: ViewControls;
-  metrics: ComparisonMetric[];
-}
-
-export function CompareMode(props: Props) {
-  return (
-    <div className="compare-mode">
-      <div className="compare-cubes">
-        <section className="compare-card">
-          <div className="compare-head"><span>MIX A</span><b>{props.mixA.name}</b></div>
-          <ConcreteCube analysis={props.analysisA} packing={props.packingA} compaction={props.compactionA} view={props.view} />
-        </section>
-        <section className="compare-card">
-          <div className="compare-head"><span>MIX B</span><b>{props.mixB.name}</b></div>
-          <ConcreteCube analysis={props.analysisB} packing={props.packingB} compaction={props.compactionB} view={props.view} />
-        </section>
-      </div>
-      <div className="compare-table">
-        <div className="compare-row compare-header"><span>Metric</span><span>Mix A</span><span>Mix B</span><span>Δ B−A</span></div>
-        {props.metrics.map((metric) => {
-          const preferred = metric.preference === 'higher' ? metric.delta > 0 : metric.preference === 'lower' ? metric.delta < 0 : false;
-          return (
-            <div className="compare-row" key={metric.key}>
-              <span>{metric.label}</span>
-              <b>{metric.a.toFixed(metric.unit === '%' ? 1 : 3)} {metric.unit}</b>
-              <b>{metric.b.toFixed(metric.unit === '%' ? 1 : 3)} {metric.unit}</b>
-              <b className={metric.preference === 'neutral' ? '' : preferred ? 'compare-good' : 'compare-warn'}>{metric.delta >= 0 ? '+' : ''}{metric.delta.toFixed(metric.unit === '%' ? 1 : 3)} {metric.unit}</b>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+interface Props { mixA: MixDesign; mixB: MixDesign; analysisA: MixAnalysis; analysisB: MixAnalysis; packingA: PackingResult; packingB: PackingResult; compactionA: CompactionState; compactionB: CompactionState; complianceA?: ComplianceSummary; complianceB?: ComplianceSummary; view: ViewControls; metrics: ComparisonMetric[]; }
+const faLabel=(key:string,label:string)=>({packing:'تراکم دانه‌ای',voidRatio:'نسبت فضای خالی',voidFraction:'درصد فضای خالی',paste:'حجم خمیر',aggregate:'حجم سنگدانه',wcm:'نسبت آب به مواد سیمانی'} as Record<string,string>)[key]??label;
+export function CompareMode(props: Props) { return <div className="compare-mode"><div className="compare-cubes"><section className="compare-card"><div className="compare-head"><span>طرح A</span><b>{props.mixA.name}</b><small className={props.complianceA?.issues.length?'compare-warn':'compare-good'}>{props.complianceA?.issues.length?`${props.complianceA.issues.length} مغایرت مرجع`:'وضعیت مرجع مناسب'}</small></div><ConcreteCube analysis={props.analysisA} packing={props.packingA} compaction={props.compactionA} compliance={props.complianceA} view={props.view}/></section><section className="compare-card"><div className="compare-head"><span>طرح B</span><b>{props.mixB.name}</b><small className={props.complianceB?.issues.length?'compare-warn':'compare-good'}>{props.complianceB?.issues.length?`${props.complianceB.issues.length} مغایرت مرجع`:'وضعیت مرجع مناسب'}</small></div><ConcreteCube analysis={props.analysisB} packing={props.packingB} compaction={props.compactionB} compliance={props.complianceB} view={props.view}/></section></div><div className="compare-table"><div className="compare-row compare-header"><span>شاخص</span><span>طرح A</span><span>طرح B</span><span>اختلاف B−A</span></div>{props.metrics.map(metric=>{const preferred=metric.preference==='higher'?metric.delta>0:metric.preference==='lower'?metric.delta<0:false;return <div className="compare-row" key={metric.key}><span>{faLabel(metric.key,metric.label)}</span><b>{metric.a.toFixed(metric.unit==='%'?1:3)} {metric.unit}</b><b>{metric.b.toFixed(metric.unit==='%'?1:3)} {metric.unit}</b><b className={metric.preference==='neutral'?'':preferred?'compare-good':'compare-warn'}>{metric.delta>=0?'+':''}{metric.delta.toFixed(metric.unit==='%'?1:3)} {metric.unit}</b></div>;})}</div></div>; }
