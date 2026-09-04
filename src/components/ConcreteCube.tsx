@@ -1,21 +1,180 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import * as THREE from 'three';
-import type { MixAnalysis } from '../domain/mixDesign'; import type { ViewControls } from '../domain/viewControls'; import type { PackingResult } from '../engineering/packing'; import type { CompactionState } from '../engineering/compaction'; import type { ComplianceSummary } from '../engineering/referenceCompliance'; import { evaluateEngineeringHealth } from '../engineering/engineeringHealth';
-interface Props { analysis: MixAnalysis; packing: PackingResult; compaction: CompactionState; view: ViewControls; compliance?: ComplianceSummary; }
-const C={cement:'#7f8790',water:'#2795d9',sand:'#d9b56f',aggregate5to12:'#d97b34',aggregate12to25:'#55677a',silicaFume:'#7557a8',admixture:'#35b7a0',air:'#f4f7fb'} as const;
-const labels:Record<string,string>={cement:'سیمان',water:'آب',silicaFume:'میکروسیلیس',admixture:'افزودنی',air:'حباب هوا',sand:'ماسه',aggregate5to12:'نخودی ۴٫۷۵–۱۲',aggregate12to25:'بادامی ۱۲–۲۵'};const phaseOrder:Record<string,number>={aggregate12to25:0,aggregate5to12:1,sand:2};
-function SectionPlane({view}:{view:ViewControls}){if(!view.sectionEnabled)return null;const rotation:[number,number,number]=view.sectionAxis==='x'?[0,Math.PI/2,0]:view.sectionAxis==='y'?[Math.PI/2,0,0]:[0,0,0];const position:[number,number,number]=view.sectionAxis==='x'?[view.sectionPosition,0,0]:view.sectionAxis==='y'?[0,view.sectionPosition,0]:[0,0,view.sectionPosition];return <mesh position={position} rotation={rotation}><planeGeometry args={[1.05,1.05]}/><meshBasicMaterial color="#f28b2d" transparent opacity={.15} side={THREE.DoubleSide} depthWrite={false}/></mesh>}
-function sectionVisible(p:[number,number,number],v:ViewControls){if(!v.sectionEnabled)return true;return p[v.sectionAxis==='x'?0:v.sectionAxis==='y'?1:2]<=v.sectionPosition}
-function revealFactor(k:string,i:number,total:number,p:number){if(p<=.02)return .14;const threshold=.06+(phaseOrder[k]??2)*.20+(i/Math.max(1,total))*.18;return THREE.MathUtils.smoothstep(p,threshold,Math.min(.98,threshold+.18))}
-function AnimatedParticle({particle,compaction,index,total,view,critical}:{particle:PackingResult['particles'][number];compaction:CompactionState;index:number;total:number;view:ViewControls;critical:boolean}){const ref=useRef<THREE.Mesh>(null);const mr=useRef<THREE.MeshStandardMaterial>(null);const visible=sectionVisible(particle.position,view)&&(particle.materialKey==='sand'?view.phases.sand:particle.materialKey==='aggregate5to12'?view.phases.aggregate5to12:particle.materialKey==='aggregate12to25'?view.phases.aggregate12to25:true);useFrame(({clock})=>{if(!ref.current)return;const r=revealFactor(particle.materialKey,index,total,compaction.progress),wave=Math.sin(clock.elapsedTime*34+index*.73),lat=compaction.lateralVibration*wave,sy=-.5+(particle.position[1]+.5)*compaction.settlementFactor,lift=(1-r)*(.9+(index%11)*.018);ref.current.position.set(particle.position[0]+lat,sy+lift,particle.position[2]-lat*.55);const s=.58+r*.42;ref.current.scale.set(particle.scale[0]*s,particle.scale[1]*s,particle.scale[2]*s);if(mr.current)mr.current.opacity=view.ghostMode?Math.max(.08,r*.3):Math.max(.06,r)});const base=C[particle.materialKey as keyof typeof C]??particle.color;return <mesh ref={ref} visible={visible} rotation={particle.rotation}><icosahedronGeometry args={[particle.radius,1]}/><meshStandardMaterial ref={mr} color={critical?'#ff3347':base} emissive={critical?'#8b0014':'#000'} emissiveIntensity={critical?.9:0} roughness={critical?.45:.82} transparent opacity={compaction.progress<=.02?.14:1} depthWrite={!view.ghostMode}/></mesh>}
-function Particles({packing,compaction,view,compliance}:{packing:PackingResult;compaction:CompactionState;view:ViewControls;compliance?:ComplianceSummary}){const affected=new Set(compliance?.affectedMaterials??[]);return <>{packing.particles.map((p,i)=><AnimatedParticle key={p.key} particle={p} compaction={compaction} index={i} total={packing.particles.length} view={view} critical={affected.has(p.materialKey as never)}/>)}</>}
-function points(count:number,seed:number){let s=seed>>>0;const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296};return Array.from({length:count},(_,i)=>({key:i,position:[-.47+rnd()*.94,-.47+rnd()*.94,-.47+rnd()*.94] as [number,number,number],scale:.7+rnd()*.6}))}
-function RepresentativePhases({analysis,compaction,view}:{analysis:MixAnalysis;compaction:CompactionState;view:ViewControls}){const volume=(k:string)=>analysis.materials.find(m=>m.key===k)?.absoluteVolumeM3??0;const specs=useMemo(()=>[{key:'cement',color:C.cement,r:.009,count:Math.max(18,Math.min(90,Math.round(volume('cement')*480))),seed:13579},{key:'water',color:C.water,r:.012,count:Math.max(14,Math.min(70,Math.round(volume('water')*300))),seed:97531},{key:'silicaFume',color:C.silicaFume,r:.005,count:Math.max(8,Math.min(48,Math.round(volume('silicaFume')*900))),seed:44551},{key:'admixture',color:C.admixture,r:.006,count:Math.max(5,Math.min(28,Math.round(volume('admixture')*1800))),seed:71327}], [analysis]);const reveal=compaction.progress<=.02?.10:THREE.MathUtils.smoothstep(compaction.progress,.52,.90);return <>{specs.map(spec=>{if(!view.phases[spec.key as keyof typeof view.phases])return null;return points(spec.count,spec.seed).map(p=><mesh key={`${spec.key}-${p.key}`} visible={sectionVisible(p.position,view)} position={[p.position[0],-.5+(p.position[1]+.5)*Math.max(.1,reveal),p.position[2]]} scale={p.scale}><sphereGeometry args={[spec.r,8,6]}/><meshStandardMaterial color={spec.color} roughness={spec.key==='water'?.15:.88} transparent opacity={view.ghostMode?.18:Math.max(.1,reveal*(spec.key==='water'?.5:.88))} depthWrite={spec.key!=='water'}/></mesh>})})}</>}
-function AirVoids({analysis,view}:{analysis:MixAnalysis;view:ViewControls}){const count=Math.max(8,Math.min(42,Math.round(analysis.designedAirVolumeM3*900)));const pts=useMemo(()=>points(count,818181),[count]);if(!view.phases.air)return null;return <>{pts.map(p=><mesh key={`air-${p.key}`} visible={sectionVisible(p.position,view)} position={p.position} scale={p.scale}><sphereGeometry args={[.014,10,8]}/><meshPhysicalMaterial color={C.air} transparent opacity={view.ghostMode?.08:.18} transmission={.7} roughness={.05} depthWrite={false}/></mesh>)}</>}
-function PastePhase({analysis,compaction,view}:{analysis:MixAnalysis;compaction:CompactionState;view:ViewControls}){if(!view.phases.paste)return null;const base=Math.cbrt(Math.min(.92,Math.max(.08,analysis.pasteVolumeM3))),vertical=base*(.97+compaction.progress*.03),reveal=compaction.progress<=.02?.1:THREE.MathUtils.smoothstep(compaction.progress,.58,.88);return <mesh scale={[base,vertical*reveal,base]} position={[0,-.5+(vertical*reveal)/2,0]}><boxGeometry args={[1,1,1]}/><meshPhysicalMaterial color="#e6edf3" transparent opacity={view.ghostMode?.025:.045} roughness={.3} depthWrite={false}/></mesh>}
-function RiskShell({compliance}:{compliance?:ComplianceSummary}){if(!compliance?.issues.length)return null;return <mesh scale={[1.018,1.018,1.018]}><boxGeometry args={[1,1,1]}/><meshBasicMaterial color={compliance.critical?'#ff3047':'#ff7a2b'} wireframe transparent opacity={compliance.critical?.48:.25}/></mesh>}
-function Scene({analysis,packing,compaction,view,compliance}:Props){const planes=useMemo(()=>{if(!view.sectionEnabled)return[];const n=view.sectionAxis==='x'?new THREE.Vector3(1,0,0):view.sectionAxis==='y'?new THREE.Vector3(0,1,0):new THREE.Vector3(0,0,1);return[new THREE.Plane(n,-view.sectionPosition)]},[view.sectionAxis,view.sectionEnabled,view.sectionPosition]);return <><PerspectiveCamera makeDefault position={[1.45,1.05,1.55]} fov={42}/><ambientLight intensity={1.35}/><directionalLight position={[3,4,2]} intensity={2.5}/><pointLight position={[-2,1.5,1]} intensity={.8} color="#3b82f6"/><PastePhase analysis={analysis} compaction={compaction} view={view}/><RepresentativePhases analysis={analysis} compaction={compaction} view={view}/><AirVoids analysis={analysis} view={view}/><Particles packing={packing} compaction={compaction} view={view} compliance={compliance}/><mesh><boxGeometry args={[1,1,1]}/><meshPhysicalMaterial clippingPlanes={planes} transparent opacity={view.ghostMode?.025:view.shellOpacity} roughness={.08} transmission={.48} depthWrite={false}/></mesh><RiskShell compliance={compliance}/><SectionPlane view={view}/><lineSegments><edgesGeometry args={[new THREE.BoxGeometry(1,1,1)]}/><lineBasicMaterial color="#d9e4ee" transparent opacity={view.ghostMode?.35:.72}/></lineSegments><gridHelper args={[3,30,'#31557a','#13283e']} position={[0,-.505,0]}/><OrbitControls makeDefault enableDamping dampingFactor={.07} minDistance={1.1} maxDistance={5}/></>}
-export function ConcreteCube({analysis,packing,compaction,view,compliance}:Props){const health=useMemo(()=>evaluateEngineeringHealth(analysis,packing,compaction,compliance),[analysis,packing,compaction,compliance]);const affected=new Set(compliance?.affectedMaterials??[]);const keys=['cement','water','silicaFume','admixture','air','sand','aggregate5to12','aggregate12to25'] as const;const healthStyle={'--health':`${health.score}%`} as CSSProperties;return <div className="viewport-canvas"><Canvas gl={{antialias:true,alpha:true,preserveDrawingBuffer:true}} onCreated={({gl})=>{gl.localClippingEnabled=true}}><Scene analysis={analysis} packing={packing} compaction={compaction} view={view} compliance={compliance}/></Canvas><div className={`health-orb ${health.level}`}><span>سلامت مهندسی</span><b>{health.score}</b><small>{health.labelFa}</small><i style={healthStyle}/></div><div className="phase-legend"><b>راهنمای اجزای بتن</b>{keys.map(key=><div key={key}><i style={{background:affected.has(key as never)?'#ff3347':C[key]}}/><span>{labels[key]}</span>{affected.has(key as never)&&<em>هشدار</em>}</div>)}</div><div className="health-breakdown"><div><span>تراکم</span><b>{health.packingScore}</b></div><div><span>حجم‌ها</span><b>{health.volumetricScore}</b></div><div><span>دانه‌بندی</span><b>{health.gradationScore}</b></div><div><span>اجرای تراکم</span><b>{health.compactionScore}</b></div></div><div className={`axis-label ${compliance?.issues.length?'risk':''}`}>۱٫۰۰۰ مترمکعب • {compaction.stage==='loose'?'آماده اجرای میکس':compaction.stage==='vibrating'?'در حال ورود و تراکم مصالح':'متراکم'}</div></div>}
+import type { MixAnalysis } from '../domain/mixDesign';
+import type { ViewControls } from '../domain/viewControls';
+import type { PackingResult } from '../engineering/packing';
+import type { CompactionState } from '../engineering/compaction';
+import type { ComplianceSummary } from '../engineering/referenceCompliance';
+import { evaluateEngineeringHealth } from '../engineering/engineeringHealth';
+
+interface Props {
+  analysis: MixAnalysis;
+  packing: PackingResult;
+  compaction: CompactionState;
+  view: ViewControls;
+  compliance?: ComplianceSummary;
+}
+
+type LayerKey = 'cement' | 'water' | 'silicaFume' | 'admixture' | 'air' | 'sand' | 'aggregate5to12' | 'aggregate12to25' | 'paste';
+type LayerOpacity = Record<LayerKey, number>;
+type LayerVisibility = Record<LayerKey, boolean>;
+
+const COLORS: Record<Exclude<LayerKey, 'paste'>, string> = {
+  cement: '#7f8790',
+  water: '#2795d9',
+  silicaFume: '#7557a8',
+  admixture: '#35b7a0',
+  air: '#f4f7fb',
+  sand: '#d9b56f',
+  aggregate5to12: '#d97b34',
+  aggregate12to25: '#55677a',
+};
+
+const LABELS: Record<LayerKey, string> = {
+  cement: 'سیمان',
+  water: 'آب',
+  silicaFume: 'میکروسیلیس',
+  admixture: 'افزودنی',
+  air: 'حباب هوا',
+  sand: 'ماسه',
+  aggregate5to12: 'نخودی ۴٫۷۵–۱۲',
+  aggregate12to25: 'بادامی ۱۲–۲۵',
+  paste: 'پس‌زمینه خمیر',
+};
+
+const LAYER_ORDER: LayerKey[] = ['cement', 'water', 'silicaFume', 'admixture', 'air', 'sand', 'aggregate5to12', 'aggregate12to25', 'paste'];
+const PHASE_ORDER: Record<string, number> = { aggregate12to25: 0, aggregate5to12: 1, sand: 2 };
+const DEFAULT_OPACITY: LayerOpacity = { cement: 1, water: 1, silicaFume: 1, admixture: 1, air: 1, sand: 1, aggregate5to12: 1, aggregate12to25: 1, paste: 0.65 };
+
+function initialVisibility(view: ViewControls): LayerVisibility {
+  return {
+    cement: view.phases.cement,
+    water: view.phases.water,
+    silicaFume: view.phases.silicaFume,
+    admixture: view.phases.admixture,
+    air: view.phases.air,
+    sand: view.phases.sand,
+    aggregate5to12: view.phases.aggregate5to12,
+    aggregate12to25: view.phases.aggregate12to25,
+    paste: view.phases.paste,
+  };
+}
+
+function sectionVisible(position: [number, number, number], view: ViewControls) {
+  if (!view.sectionEnabled) return true;
+  const axisIndex = view.sectionAxis === 'x' ? 0 : view.sectionAxis === 'y' ? 1 : 2;
+  return position[axisIndex] <= view.sectionPosition;
+}
+
+function revealFactor(materialKey: string, index: number, total: number, progress: number) {
+  if (progress <= 0.02) return 0.14;
+  const threshold = 0.06 + (PHASE_ORDER[materialKey] ?? 2) * 0.2 + (index / Math.max(1, total)) * 0.18;
+  return THREE.MathUtils.smoothstep(progress, threshold, Math.min(0.98, threshold + 0.18));
+}
+
+function SectionPlane({ view }: { view: ViewControls }) {
+  if (!view.sectionEnabled) return null;
+  const rotation: [number, number, number] = view.sectionAxis === 'x' ? [0, Math.PI / 2, 0] : view.sectionAxis === 'y' ? [Math.PI / 2, 0, 0] : [0, 0, 0];
+  const position: [number, number, number] = view.sectionAxis === 'x' ? [view.sectionPosition, 0, 0] : view.sectionAxis === 'y' ? [0, view.sectionPosition, 0] : [0, 0, view.sectionPosition];
+  return <mesh position={position} rotation={rotation}><planeGeometry args={[1.05, 1.05]} /><meshBasicMaterial color="#f28b2d" transparent opacity={0.15} side={THREE.DoubleSide} depthWrite={false} /></mesh>;
+}
+
+function AnimatedParticle({ particle, compaction, index, total, view, critical, opacity }: { particle: PackingResult['particles'][number]; compaction: CompactionState; index: number; total: number; view: ViewControls; critical: boolean; opacity: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const reveal = revealFactor(particle.materialKey, index, total, compaction.progress);
+    const wave = Math.sin(clock.elapsedTime * 34 + index * 0.73);
+    const lateral = compaction.lateralVibration * wave;
+    const settledY = -0.5 + (particle.position[1] + 0.5) * compaction.settlementFactor;
+    const inletLift = (1 - reveal) * (0.9 + (index % 11) * 0.018);
+    ref.current.position.set(particle.position[0] + lateral, settledY + inletLift, particle.position[2] - lateral * 0.55);
+    const scale = 0.58 + reveal * 0.42;
+    ref.current.scale.set(particle.scale[0] * scale, particle.scale[1] * scale, particle.scale[2] * scale);
+    if (materialRef.current) materialRef.current.opacity = Math.max(0.04, reveal * opacity * (view.ghostMode ? 0.3 : 1));
+  });
+  const base = COLORS[particle.materialKey as Exclude<LayerKey, 'paste'>] ?? particle.color;
+  return <mesh ref={ref} visible={sectionVisible(particle.position, view)} rotation={particle.rotation}><icosahedronGeometry args={[particle.radius, 1]} /><meshStandardMaterial ref={materialRef} color={base} emissive={critical ? '#ff263f' : '#000000'} emissiveIntensity={critical ? 1.05 : 0} roughness={critical ? 0.45 : 0.82} transparent opacity={compaction.progress <= 0.02 ? 0.14 : opacity} depthWrite={opacity > 0.65 && !view.ghostMode} /></mesh>;
+}
+
+function Particles({ packing, compaction, view, compliance, visibility, opacity }: { packing: PackingResult; compaction: CompactionState; view: ViewControls; compliance?: ComplianceSummary; visibility: LayerVisibility; opacity: LayerOpacity }) {
+  const affected = new Set(compliance?.affectedMaterials ?? []);
+  return <>{packing.particles.map((particle, index) => {
+    const key = particle.materialKey as LayerKey;
+    if (!visibility[key]) return null;
+    return <AnimatedParticle key={particle.key} particle={particle} compaction={compaction} index={index} total={packing.particles.length} view={view} critical={affected.has(particle.materialKey as never)} opacity={opacity[key] ?? 1} />;
+  })}</>;
+}
+
+function representativePoints(count: number, seed: number) {
+  let state = seed >>> 0;
+  const random = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; };
+  return Array.from({ length: count }, (_, key) => ({ key, position: [-0.47 + random() * 0.94, -0.47 + random() * 0.94, -0.47 + random() * 0.94] as [number, number, number], scale: 0.7 + random() * 0.6 }));
+}
+
+function RepresentativePhases({ analysis, compaction, view, visibility, opacity }: { analysis: MixAnalysis; compaction: CompactionState; view: ViewControls; visibility: LayerVisibility; opacity: LayerOpacity }) {
+  const volume = (key: string) => analysis.materials.find((material) => material.key === key)?.absoluteVolumeM3 ?? 0;
+  const specs = useMemo(() => [
+    { key: 'cement' as LayerKey, radius: 0.009, count: Math.max(18, Math.min(90, Math.round(volume('cement') * 480))), seed: 13579 },
+    { key: 'water' as LayerKey, radius: 0.012, count: Math.max(14, Math.min(70, Math.round(volume('water') * 300))), seed: 97531 },
+    { key: 'silicaFume' as LayerKey, radius: 0.005, count: Math.max(8, Math.min(48, Math.round(volume('silicaFume') * 900))), seed: 44551 },
+    { key: 'admixture' as LayerKey, radius: 0.006, count: Math.max(5, Math.min(28, Math.round(volume('admixture') * 1800))), seed: 71327 },
+  ], [analysis]);
+  const reveal = compaction.progress <= 0.02 ? 0.1 : THREE.MathUtils.smoothstep(compaction.progress, 0.52, 0.9);
+  return <>{specs.map((spec) => {
+    if (!visibility[spec.key]) return null;
+    return representativePoints(spec.count, spec.seed).map((point) => <mesh key={`${spec.key}-${point.key}`} visible={sectionVisible(point.position, view)} position={[point.position[0], -0.5 + (point.position[1] + 0.5) * Math.max(0.1, reveal), point.position[2]]} scale={point.scale}><sphereGeometry args={[spec.radius, 8, 6]} /><meshStandardMaterial color={COLORS[spec.key as Exclude<LayerKey, 'paste'>]} roughness={spec.key === 'water' ? 0.15 : 0.88} transparent opacity={Math.max(0.05, reveal * opacity[spec.key] * (view.ghostMode ? 0.25 : spec.key === 'water' ? 0.52 : 0.9))} depthWrite={spec.key !== 'water' && opacity[spec.key] > 0.65} /></mesh>);
+  })}</>;
+}
+
+function AirVoids({ analysis, view, visibility, opacity }: { analysis: MixAnalysis; view: ViewControls; visibility: LayerVisibility; opacity: LayerOpacity }) {
+  const count = Math.max(8, Math.min(42, Math.round(analysis.designedAirVolumeM3 * 900)));
+  const points = useMemo(() => representativePoints(count, 818181), [count]);
+  if (!visibility.air) return null;
+  return <>{points.map((point) => <mesh key={`air-${point.key}`} visible={sectionVisible(point.position, view)} position={point.position} scale={point.scale}><sphereGeometry args={[0.014, 10, 8]} /><meshPhysicalMaterial color={COLORS.air} transparent opacity={0.2 * opacity.air * (view.ghostMode ? 0.45 : 1)} transmission={0.7} roughness={0.05} depthWrite={false} /></mesh>)}</>;
+}
+
+function PastePhase({ analysis, compaction, visibility, opacity, view }: { analysis: MixAnalysis; compaction: CompactionState; visibility: LayerVisibility; opacity: LayerOpacity; view: ViewControls }) {
+  if (!visibility.paste) return null;
+  const base = Math.cbrt(Math.min(0.92, Math.max(0.08, analysis.pasteVolumeM3)));
+  const vertical = base * (0.97 + compaction.progress * 0.03);
+  const reveal = compaction.progress <= 0.02 ? 0.1 : THREE.MathUtils.smoothstep(compaction.progress, 0.58, 0.88);
+  return <mesh scale={[base, vertical * reveal, base]} position={[0, -0.5 + (vertical * reveal) / 2, 0]}><boxGeometry args={[1, 1, 1]} /><meshPhysicalMaterial color="#e6edf3" transparent opacity={0.045 * opacity.paste * (view.ghostMode ? 0.55 : 1)} roughness={0.3} depthWrite={false} /></mesh>;
+}
+
+function Scene({ analysis, packing, compaction, view, compliance, visibility, opacity }: Props & { visibility: LayerVisibility; opacity: LayerOpacity }) {
+  const clippingPlanes = useMemo(() => {
+    if (!view.sectionEnabled) return [];
+    const normal = view.sectionAxis === 'x' ? new THREE.Vector3(1, 0, 0) : view.sectionAxis === 'y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+    return [new THREE.Plane(normal, -view.sectionPosition)];
+  }, [view.sectionAxis, view.sectionEnabled, view.sectionPosition]);
+  return <><PerspectiveCamera makeDefault position={[1.45, 1.05, 1.55]} fov={42} /><ambientLight intensity={1.35} /><directionalLight position={[3, 4, 2]} intensity={2.5} /><pointLight position={[-2, 1.5, 1]} intensity={0.8} color="#3b82f6" /><PastePhase analysis={analysis} compaction={compaction} visibility={visibility} opacity={opacity} view={view} /><RepresentativePhases analysis={analysis} compaction={compaction} view={view} visibility={visibility} opacity={opacity} /><AirVoids analysis={analysis} view={view} visibility={visibility} opacity={opacity} /><Particles packing={packing} compaction={compaction} view={view} compliance={compliance} visibility={visibility} opacity={opacity} /><mesh><boxGeometry args={[1, 1, 1]} /><meshPhysicalMaterial clippingPlanes={clippingPlanes} transparent opacity={view.ghostMode ? 0.025 : view.shellOpacity} roughness={0.08} transmission={0.48} depthWrite={false} /></mesh><SectionPlane view={view} /><lineSegments><edgesGeometry args={[new THREE.BoxGeometry(1, 1, 1)]} /><lineBasicMaterial color="#d9e4ee" transparent opacity={view.ghostMode ? 0.35 : 0.72} /></lineSegments><gridHelper args={[3, 30, '#31557a', '#13283e']} position={[0, -0.505, 0]} /><OrbitControls makeDefault enableDamping dampingFactor={0.07} minDistance={1.1} maxDistance={5} /></>;
+}
+
+function layerVolumePercent(key: LayerKey, analysis: MixAnalysis) {
+  if (key === 'air') return analysis.designedAirVolumeM3 * 100;
+  if (key === 'paste') return analysis.pasteVolumeM3 * 100;
+  return analysis.materials.find((material) => material.key === key)?.volumePercent ?? 0;
+}
+
+export function ConcreteCube({ analysis, packing, compaction, view, compliance }: Props) {
+  const [visibility, setVisibility] = useState<LayerVisibility>(() => initialVisibility(view));
+  const [opacity, setOpacity] = useState<LayerOpacity>(DEFAULT_OPACITY);
+  const [solo, setSolo] = useState<LayerKey | null>(null);
+  useEffect(() => { if (!solo) setVisibility(initialVisibility(view)); }, [view.phases, solo]);
+  const renderedVisibility = useMemo(() => {
+    if (!solo) return visibility;
+    return Object.fromEntries(LAYER_ORDER.map((key) => [key, key === solo])) as LayerVisibility;
+  }, [visibility, solo]);
+  const health = useMemo(() => evaluateEngineeringHealth(analysis, packing, compaction, compliance), [analysis, packing, compaction, compliance]);
+  const affected = new Set(compliance?.affectedMaterials ?? []);
+  const healthStyle = { '--health': `${health.score}%` } as CSSProperties;
+  const showAll = () => { setSolo(null); setVisibility(Object.fromEntries(LAYER_ORDER.map((key) => [key, true])) as LayerVisibility); };
+  const toggleSolo = (key: LayerKey) => setSolo((current) => current === key ? null : key);
+
+  return <div className="viewport-canvas"><Canvas gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }} onCreated={({ gl }) => { gl.localClippingEnabled = true; }}><Scene analysis={analysis} packing={packing} compaction={compaction} view={view} compliance={compliance} visibility={renderedVisibility} opacity={opacity} /></Canvas><div className={`health-orb ${health.level}`}><span>سلامت مهندسی</span><b>{health.score}</b><small>{health.labelFa}</small><i style={healthStyle} /></div><div className="layers-panel"><div className="layers-head"><div><b>لایه‌های اجزای بتن</b><span>نمایش، Solo و شفافیت</span></div><button onClick={showAll}>همه</button></div>{LAYER_ORDER.map((key) => { const active = renderedVisibility[key]; const color = key === 'paste' ? '#dbe5ed' : affected.has(key as never) ? '#ff3347' : COLORS[key]; return <div className={`layer-row ${active ? '' : 'muted'}`} key={key}><button className="layer-eye" onClick={() => { setSolo(null); setVisibility((current) => ({ ...current, [key]: !current[key] })); }}>{active ? '●' : '○'}</button><button className={`layer-solo ${solo === key ? 'active' : ''}`} onClick={() => toggleSolo(key)}>S</button><i className="layer-swatch" style={{ background: color }} /><div className="layer-main"><div><span>{LABELS[key]}</span><b>{layerVolumePercent(key, analysis).toFixed(1)}٪</b></div><input aria-label={`شفافیت ${LABELS[key]}`} type="range" min="0.05" max="1" step="0.05" value={opacity[key]} onChange={(event) => setOpacity((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div></div>; })}</div><div className="health-breakdown"><div><span>تراکم</span><b>{health.packingScore}</b></div><div><span>حجم‌ها</span><b>{health.volumetricScore}</b></div><div><span>دانه‌بندی</span><b>{health.gradationScore}</b></div><div><span>اجرای تراکم</span><b>{health.compactionScore}</b></div></div><div className={`axis-label ${compliance?.issues.length ? 'risk' : ''}`}>۱٫۰۰۰ مترمکعب • {compaction.stage === 'loose' ? 'آماده اجرای میکس' : compaction.stage === 'vibrating' ? 'در حال ورود و تراکم مصالح' : 'متراکم'}</div></div>;
+}
