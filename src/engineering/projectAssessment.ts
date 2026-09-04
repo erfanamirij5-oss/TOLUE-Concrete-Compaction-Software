@@ -1,6 +1,8 @@
 import type { ConcreteProject } from '../domain/project';
+import { defaultRebarNetwork, type RebarNetworkInput } from '../domain/rebarAnalysis';
 import { analyzeMix } from './analyzeMix';
 import { evaluateCompaction } from './compaction';
+import { evaluateCoupledPlacement, type CoupledPlacementAssessment } from './coupledPlacement';
 import { diagnoseMix } from './diagnostics';
 import { evaluateFinalAssessment, type FinalAssessment } from './finalAssessment';
 import { generatePacking } from './packing';
@@ -13,6 +15,7 @@ export interface ProjectMixAssessment {
   labelFa: string;
   rankFa: string;
   assessment: FinalAssessment;
+  placementAssessment: CoupledPlacementAssessment;
   wCm: number;
   packingDensity: number;
   voidFraction: number;
@@ -22,14 +25,22 @@ export interface ProjectMixAssessment {
 export interface ProjectAssessment {
   mixes: ProjectMixAssessment[];
   averageScore: number;
+  averagePlacementScore: number;
   bestMixId: string | null;
   weakestMixId: string | null;
-  method: 'tolue-project-assessment-v1';
+  bestPlacementMixId: string | null;
+  weakestPlacementMixId: string | null;
+  method: 'tolue-project-assessment-v2';
   evaluationSeed: number;
+  rebarScenario: RebarNetworkInput;
   noteFa: string;
 }
 
-export function evaluateProjectAssessment(project: ConcreteProject, seed = 20260905): ProjectAssessment {
+export function evaluateProjectAssessment(
+  project: ConcreteProject,
+  seed = 20260905,
+  rebarScenario: RebarNetworkInput = defaultRebarNetwork,
+): ProjectAssessment {
   const mixes = project.mixes.map((mix) => {
     const analysis = analyzeMix(mix);
     const packing = generatePacking(mix, analysis, seed);
@@ -37,6 +48,7 @@ export function evaluateProjectAssessment(project: ConcreteProject, seed = 20260
     const diagnostics = diagnoseMix(mix, analysis, packing);
     const compliance = evaluateReferenceCompliance(mix);
     const assessment = evaluateFinalAssessment(mix, analysis, packing, diagnostics, compliance, compaction);
+    const placementAssessment = evaluateCoupledPlacement(mix, analysis, packing, compaction, rebarScenario);
     return {
       mixId: mix.id,
       mixName: mix.name,
@@ -44,6 +56,7 @@ export function evaluateProjectAssessment(project: ConcreteProject, seed = 20260
       labelFa: assessment.labelFa,
       rankFa: assessment.rankFa,
       assessment,
+      placementAssessment,
       wCm: analysis.wCm,
       packingDensity: packing.packingDensity,
       voidFraction: packing.voidFraction,
@@ -51,13 +64,19 @@ export function evaluateProjectAssessment(project: ConcreteProject, seed = 20260
     };
   }).sort((a,b)=>b.score-a.score);
 
+  const byPlacement=[...mixes].sort((a,b)=>b.placementAssessment.score-a.placementAssessment.score);
+
   return {
     mixes,
     averageScore: mixes.length ? Math.round(mixes.reduce((sum,item)=>sum+item.score,0)/mixes.length) : 0,
+    averagePlacementScore: mixes.length ? Math.round(mixes.reduce((sum,item)=>sum+item.placementAssessment.score,0)/mixes.length) : 0,
     bestMixId: mixes[0]?.mixId ?? null,
     weakestMixId: mixes[mixes.length-1]?.mixId ?? null,
-    method:'tolue-project-assessment-v1',
+    bestPlacementMixId: byPlacement[0]?.mixId ?? null,
+    weakestPlacementMixId: byPlacement[byPlacement.length-1]?.mixId ?? null,
+    method:'tolue-project-assessment-v2',
     evaluationSeed: seed,
-    noteFa:'برای مقایسه منصفانه، همه طرح‌ها با Seed یکسان و وضعیت تراکم تکمیل‌شده مدل داخلی ارزیابی شده‌اند. این رتبه‌بندی جایگزین نتایج آزمایشگاهی یا کنترل استاندارد رسمی نیست.',
+    rebarScenario,
+    noteFa:'برای مقایسه منصفانه، همه طرح‌ها با Seed یکسان، تراکم تکمیل‌شده و یک سناریوی آرماتور یکسان ارزیابی شده‌اند. نمره بتن و نمره قابلیت اجرا در آرماتور، مدل مهندسی داخلی TOLUE هستند و جایگزین آزمایش یا کنترل استاندارد رسمی نیستند.',
   };
 }
