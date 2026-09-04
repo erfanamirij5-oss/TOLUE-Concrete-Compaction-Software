@@ -30,7 +30,7 @@ export const PRODUCT_IDENTITY = {
   designer: 'مهندس عرفان امیری',
   phone: '۰۹۱۳۳۲۴۰۲۰۵',
   email: 'Erfanamiriyazd@gmail.com',
-  website: '',
+  website: 'Tolueapp.ir',
 } as const;
 
 export function cloneMix(mix: MixDesign, id: string, name: string): MixDesign {
