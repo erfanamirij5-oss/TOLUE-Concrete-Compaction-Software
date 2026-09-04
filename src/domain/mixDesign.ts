@@ -7,6 +7,19 @@ export type MaterialKey =
   | 'aggregate5to12'
   | 'aggregate12to25';
 
+export type AggregateMaterialKey = 'sand' | 'aggregate5to12' | 'aggregate12to25';
+
+export interface GradationPoint {
+  sieveMm: number;
+  passingPercent: number;
+}
+
+export interface GradationCurve {
+  materialKey: AggregateMaterialKey;
+  label: string;
+  points: GradationPoint[];
+}
+
 export interface MaterialInput {
   key: MaterialKey;
   label: string;
@@ -21,6 +34,7 @@ export interface MixDesign {
   name: string;
   targetAirPercent: number;
   materials: MaterialInput[];
+  gradations: GradationCurve[];
 }
 
 export interface MaterialVolume extends MaterialInput {
@@ -53,5 +67,40 @@ export const defaultMix: MixDesign = {
     { key: 'sand', label: 'Sand 0–4.75 mm', massKgPerM3: 760, densityKgPerM3: 2650, color: '#c5ad7c', phase: 'fine' },
     { key: 'aggregate5to12', label: 'Aggregate 4.75–12 mm', massKgPerM3: 420, densityKgPerM3: 2680, color: '#a18c74', phase: 'intermediate' },
     { key: 'aggregate12to25', label: 'Aggregate 12–25 mm', massKgPerM3: 610, densityKgPerM3: 2700, color: '#7c858c', phase: 'coarse' },
+  ],
+  gradations: [
+    {
+      materialKey: 'sand',
+      label: 'Sand 0–4.75 mm',
+      points: [
+        { sieveMm: 4.75, passingPercent: 100 },
+        { sieveMm: 2.36, passingPercent: 88 },
+        { sieveMm: 1.18, passingPercent: 70 },
+        { sieveMm: 0.6, passingPercent: 48 },
+        { sieveMm: 0.3, passingPercent: 24 },
+        { sieveMm: 0.15, passingPercent: 8 },
+        { sieveMm: 0.075, passingPercent: 3 },
+      ],
+    },
+    {
+      materialKey: 'aggregate5to12',
+      label: 'Aggregate 4.75–12 mm',
+      points: [
+        { sieveMm: 12.5, passingPercent: 100 },
+        { sieveMm: 9.5, passingPercent: 78 },
+        { sieveMm: 4.75, passingPercent: 7 },
+        { sieveMm: 2.36, passingPercent: 1 },
+      ],
+    },
+    {
+      materialKey: 'aggregate12to25',
+      label: 'Aggregate 12–25 mm',
+      points: [
+        { sieveMm: 25, passingPercent: 100 },
+        { sieveMm: 19, passingPercent: 78 },
+        { sieveMm: 12.5, passingPercent: 12 },
+        { sieveMm: 9.5, passingPercent: 3 },
+      ],
+    },
   ],
 };
