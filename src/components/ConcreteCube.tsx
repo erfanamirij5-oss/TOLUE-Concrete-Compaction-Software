@@ -1,8 +1,9 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { MixAnalysis } from '../domain/mixDesign';
+import type { ViewControls } from '../domain/viewControls';
 import type { PackingResult } from '../engineering/packing';
 import type { CompactionState } from '../engineering/compaction';
 
@@ -10,10 +11,31 @@ interface Props {
   analysis: MixAnalysis;
   packing: PackingResult;
   compaction: CompactionState;
+  view: ViewControls;
 }
 
-function AnimatedParticle({ particle, compaction, index }: { particle: PackingResult['particles'][number]; compaction: CompactionState; index: number }) {
+function SectionPlane({ view }: { view: ViewControls }) {
+  if (!view.sectionEnabled) return null;
+  const rotation: [number, number, number] = view.sectionAxis === 'x' ? [0, Math.PI / 2, 0] : view.sectionAxis === 'y' ? [Math.PI / 2, 0, 0] : [0, 0, 0];
+  const position: [number, number, number] = view.sectionAxis === 'x' ? [view.sectionPosition, 0, 0] : view.sectionAxis === 'y' ? [0, view.sectionPosition, 0] : [0, 0, view.sectionPosition];
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={[1.05, 1.05]} />
+      <meshBasicMaterial color="#c58b45" transparent opacity={0.12} side={THREE.DoubleSide} depthWrite={false} />
+    </mesh>
+  );
+}
+
+function isVisibleBySection(position: [number, number, number], view: ViewControls) {
+  if (!view.sectionEnabled) return true;
+  const axisIndex = view.sectionAxis === 'x' ? 0 : view.sectionAxis === 'y' ? 1 : 2;
+  return position[axisIndex] <= view.sectionPosition;
+}
+
+function AnimatedParticle({ particle, compaction, index, view }: { particle: PackingResult['particles'][number]; compaction: CompactionState; index: number; view: ViewControls }) {
   const ref = useRef<THREE.Mesh>(null);
+  const visible = isVisibleBySection(particle.position, view) && (particle.materialKey === 'sand' ? view.phases.sand : particle.materialKey === 'aggregate5to12' ? view.phases.aggregate5to12 : particle.materialKey === 'aggregate12to25' ? view.phases.aggregate12to25 : true);
+
   useFrame(({ clock }) => {
     if (!ref.current) return;
     const wave = Math.sin(clock.elapsedTime * 34 + index * 0.73);
@@ -23,50 +45,52 @@ function AnimatedParticle({ particle, compaction, index }: { particle: PackingRe
   });
 
   return (
-    <mesh ref={ref} rotation={particle.rotation} scale={particle.scale}>
+    <mesh ref={ref} visible={visible} rotation={particle.rotation} scale={particle.scale}>
       <icosahedronGeometry args={[particle.radius, 1]} />
-      <meshStandardMaterial color={particle.color} roughness={0.84} />
+      <meshStandardMaterial color={particle.color} roughness={0.84} transparent={view.ghostMode} opacity={view.ghostMode ? 0.25 : 1} depthWrite={!view.ghostMode} />
     </mesh>
   );
 }
 
-function Particles({ packing, compaction }: { packing: PackingResult; compaction: CompactionState }) {
-  return (
-    <>
-      {packing.particles.map((particle, index) => (
-        <AnimatedParticle key={particle.key} particle={particle} compaction={compaction} index={index} />
-      ))}
-    </>
-  );
+function Particles({ packing, compaction, view }: { packing: PackingResult; compaction: CompactionState; view: ViewControls }) {
+  return <>{packing.particles.map((particle, index) => <AnimatedParticle key={particle.key} particle={particle} compaction={compaction} index={index} view={view} />)}</>;
 }
 
-function PastePhase({ analysis, compaction }: { analysis: MixAnalysis; compaction: CompactionState }) {
+function PastePhase({ analysis, compaction, view }: { analysis: MixAnalysis; compaction: CompactionState; view: ViewControls }) {
   const pasteFraction = Math.min(0.92, Math.max(0.08, analysis.pasteVolumeM3));
   const baseScale = Math.cbrt(pasteFraction);
   const verticalScale = baseScale * (0.97 + compaction.progress * 0.03);
+  if (!view.phases.paste) return null;
   return (
     <mesh scale={[baseScale, verticalScale, baseScale]} position={[0, -0.5 + verticalScale / 2, 0]}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshPhysicalMaterial color="#68757f" transparent opacity={0.13} roughness={0.34} depthWrite={false} />
+      <meshPhysicalMaterial color="#68757f" transparent opacity={view.ghostMode ? 0.05 : 0.13} roughness={0.34} depthWrite={false} />
     </mesh>
   );
 }
 
-function Scene({ analysis, packing, compaction }: Props) {
+function Scene({ analysis, packing, compaction, view }: Props) {
+  const clippingPlanes = useMemo(() => {
+    if (!view.sectionEnabled) return [];
+    const normal = view.sectionAxis === 'x' ? new THREE.Vector3(1, 0, 0) : view.sectionAxis === 'y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+    return [new THREE.Plane(normal, -view.sectionPosition)];
+  }, [view.sectionAxis, view.sectionEnabled, view.sectionPosition]);
+
   return (
     <>
       <PerspectiveCamera makeDefault position={[1.45, 1.05, 1.55]} fov={42} />
       <ambientLight intensity={1.3} />
       <directionalLight position={[3, 4, 2]} intensity={2.4} />
-      <PastePhase analysis={analysis} compaction={compaction} />
-      <Particles packing={packing} compaction={compaction} />
+      <PastePhase analysis={analysis} compaction={compaction} view={view} />
+      <Particles packing={packing} compaction={compaction} view={view} />
       <mesh>
         <boxGeometry args={[1, 1, 1]} />
-        <meshPhysicalMaterial transparent opacity={0.08} roughness={0.08} metalness={0.05} transmission={0.45} depthWrite={false} />
+        <meshPhysicalMaterial clippingPlanes={clippingPlanes} transparent opacity={view.ghostMode ? 0.025 : view.shellOpacity} roughness={0.08} metalness={0.05} transmission={0.45} depthWrite={false} />
       </mesh>
+      <SectionPlane view={view} />
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(1, 1, 1)]} />
-        <lineBasicMaterial color="#8fa0ad" transparent opacity={0.65} />
+        <lineBasicMaterial color="#8fa0ad" transparent opacity={view.ghostMode ? 0.3 : 0.65} />
       </lineSegments>
       <gridHelper args={[3, 30, '#313a42', '#1b2229']} position={[0, -0.505, 0]} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.07} minDistance={1.1} maxDistance={5} />
@@ -74,13 +98,13 @@ function Scene({ analysis, packing, compaction }: Props) {
   );
 }
 
-export function ConcreteCube({ analysis, packing, compaction }: Props) {
+export function ConcreteCube({ analysis, packing, compaction, view }: Props) {
   return (
     <div className="viewport-canvas">
-      <Canvas gl={{ antialias: true, alpha: true }}>
-        <Scene analysis={analysis} packing={packing} compaction={compaction} />
+      <Canvas gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
+        <Scene analysis={analysis} packing={packing} compaction={compaction} view={view} />
       </Canvas>
-      <div className="axis-label">1.000 m³ • {compaction.stage.toUpperCase()} • {(compaction.progress * 100).toFixed(0)}% compaction</div>
+      <div className="axis-label">1.000 m³ • {compaction.stage.toUpperCase()} • {view.sectionEnabled ? `CUT ${view.sectionAxis.toUpperCase()} ${view.sectionPosition.toFixed(2)} m` : 'FULL VOLUME'}</div>
     </div>
   );
 }
