@@ -5,6 +5,7 @@ export interface PackedParticle {
   key: string;
   materialKey: string;
   color: string;
+  diameterMm: number;
   radius: number;
   position: [number, number, number];
   rotation: [number, number, number];
@@ -59,6 +60,7 @@ export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20
         key: `${phaseIndex}-${i}`,
         materialKey: phase.key,
         color: phase.color,
+        diameterMm,
         radius,
         position: [0, 0, 0],
         rotation: [random() * Math.PI, random() * Math.PI, random() * Math.PI],
