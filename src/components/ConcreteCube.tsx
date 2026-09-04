@@ -2,13 +2,15 @@ import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import type { MixAnalysis } from '../domain/mixDesign';
+import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
+import { sampleDiameterMm } from '../engineering/gradation';
 
 interface Props {
   analysis: MixAnalysis;
+  mix: MixDesign;
 }
 
-function Particles({ analysis }: Props) {
+function Particles({ analysis, mix }: Props) {
   const particles = useMemo(() => {
     let seed = 20260905;
     const random = () => {
@@ -21,33 +23,39 @@ function Particles({ analysis }: Props) {
     );
 
     return particlePhases.flatMap((phase, phaseIndex) => {
-      const radius = phase.phase === 'coarse' ? 0.052 : phase.phase === 'intermediate' ? 0.034 : 0.017;
-      const baseCount = phase.phase === 'coarse' ? 60 : phase.phase === 'intermediate' ? 100 : 180;
+      const baseCount = phase.phase === 'coarse' ? 65 : phase.phase === 'intermediate' ? 115 : 240;
       const count = Math.max(1, Math.round(baseCount * Math.min(1.7, phase.absoluteVolumeM3 / 0.22)));
+      const curve = mix.gradations.find((item) => item.materialKey === phase.key);
 
-      return Array.from({ length: count }, (_, index) => ({
-        key: `${phaseIndex}-${index}`,
-        position: [random() - 0.5, random() - 0.5, random() - 0.5] as [number, number, number],
-        scale: 0.62 + random() * 0.75,
-        radius,
-        color: phase.color,
-      }));
+      return Array.from({ length: count }, (_, index) => {
+        const sampledDiameterMm = curve ? sampleDiameterMm(curve, random()) : phase.phase === 'coarse' ? 19 : phase.phase === 'intermediate' ? 9 : 1.2;
+        const displayRadius = Math.max(0.006, Math.min(0.061, sampledDiameterMm / 360));
+        const elongation = 0.72 + random() * 0.55;
+        return {
+          key: `${phaseIndex}-${index}`,
+          position: [random() - 0.5, random() - 0.5, random() - 0.5] as [number, number, number],
+          rotation: [random() * Math.PI, random() * Math.PI, random() * Math.PI] as [number, number, number],
+          scale: [elongation, 0.72 + random() * 0.5, 0.72 + random() * 0.5] as [number, number, number],
+          radius: displayRadius,
+          color: phase.color,
+        };
+      });
     });
-  }, [analysis]);
+  }, [analysis, mix.gradations]);
 
   return (
     <>
       {particles.map((particle) => (
-        <mesh key={particle.key} position={particle.position} scale={particle.scale}>
+        <mesh key={particle.key} position={particle.position} rotation={particle.rotation} scale={particle.scale}>
           <icosahedronGeometry args={[particle.radius, 1]} />
-          <meshStandardMaterial color={particle.color} roughness={0.82} />
+          <meshStandardMaterial color={particle.color} roughness={0.84} />
         </mesh>
       ))}
     </>
   );
 }
 
-function PastePhase({ analysis }: Props) {
+function PastePhase({ analysis }: { analysis: MixAnalysis }) {
   const pasteFraction = Math.min(0.92, Math.max(0.08, analysis.pasteVolumeM3));
   const scale = Math.cbrt(pasteFraction);
   return (
@@ -58,14 +66,14 @@ function PastePhase({ analysis }: Props) {
   );
 }
 
-function Scene({ analysis }: Props) {
+function Scene({ analysis, mix }: Props) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[1.45, 1.05, 1.55]} fov={42} />
       <ambientLight intensity={1.3} />
       <directionalLight position={[3, 4, 2]} intensity={2.4} />
       <PastePhase analysis={analysis} />
-      <Particles analysis={analysis} />
+      <Particles analysis={analysis} mix={mix} />
       <mesh>
         <boxGeometry args={[1, 1, 1]} />
         <meshPhysicalMaterial transparent opacity={0.08} roughness={0.08} metalness={0.05} transmission={0.45} depthWrite={false} />
@@ -80,13 +88,13 @@ function Scene({ analysis }: Props) {
   );
 }
 
-export function ConcreteCube({ analysis }: Props) {
+export function ConcreteCube({ analysis, mix }: Props) {
   return (
     <div className="viewport-canvas">
       <Canvas gl={{ antialias: true, alpha: true }}>
-        <Scene analysis={analysis} />
+        <Scene analysis={analysis} mix={mix} />
       </Canvas>
-      <div className="axis-label">1.000 m³ • volume-driven visualization</div>
+      <div className="axis-label">1.000 m³ • PSD-driven particle sizing</div>
     </div>
   );
 }
