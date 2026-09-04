@@ -4,6 +4,7 @@ import { GradationEditor } from './components/GradationEditor';
 import { MixDesignEditor } from './components/MixDesignEditor';
 import { analyzeMix } from './engineering/analyzeMix';
 import { analyzeGradation } from './engineering/gradation';
+import { generatePacking } from './engineering/packing';
 import { defaultMix, type MixDesign } from './domain/mixDesign';
 
 type EditorMode = 'mix' | 'gradation' | null;
@@ -14,17 +15,19 @@ export function App() {
   const analysis = useMemo(() => analyzeMix(mix), [mix]);
   const gradationAnalyses = useMemo(() => mix.gradations.map(analyzeGradation), [mix.gradations]);
   const gradationsValid = gradationAnalyses.every((item) => item.valid);
+  const packing = useMemo(() => generatePacking(mix, analysis), [mix, analysis]);
 
   const metrics = [
-    ['Total material volume', `${analysis.totalSolidAndLiquidVolumeM3.toFixed(3)} m³`],
+    ['Packing density', `${(packing.packingDensity * 100).toFixed(1)} %`],
+    ['Void ratio e', packing.voidRatio.toFixed(3)],
+    ['Void fraction', `${(packing.voidFraction * 100).toFixed(1)} %`],
+    ['Placement efficiency', `${(packing.placementEfficiency * 100).toFixed(1)} %`],
     ['Paste volume', `${analysis.pasteVolumeM3.toFixed(3)} m³`],
-    ['Aggregate volume', `${analysis.aggregateVolumeM3.toFixed(3)} m³`],
     ['w/cm', analysis.wCm.toFixed(3)],
-    ['Designed air', `${(analysis.designedAirVolumeM3 * 100).toFixed(1)} %`],
-    ['Closure error', `${analysis.volumeClosureErrorPercent.toFixed(1)} %`],
   ];
 
   const volumeOk = Math.abs(analysis.volumeClosureErrorPercent) <= 3;
+  const packingClass = packing.packingDensity >= 0.64 ? 'DENSE' : packing.packingDensity >= 0.59 ? 'MODERATE' : 'LOOSE';
 
   return (
     <main className="app-shell">
@@ -43,21 +46,21 @@ export function App() {
           <div className="tree active">◇ {mix.name}</div>
           <div className="tree">▦ Materials</div>
           <button className="tree tree-button" onClick={() => setEditorMode('gradation')}>◫ Gradation <span className={gradationsValid ? 'tree-ok' : 'tree-warn'}>{gradationsValid ? '✓' : '!'}</span></button>
-          <div className="tree">⬡ Simulation</div>
+          <div className="tree">⬡ Packing Simulation</div>
           <div className="tree">⇄ Comparison</div>
           <div className="tree">▤ Reports</div>
         </aside>
 
         <section className="viewport">
           <div className="viewport-toolbar">
-            <span>3D SPECIMEN • PSD DRIVEN</span>
+            <span>3D SPECIMEN • PACKING ENGINE V1</span>
             <div>
               <button onClick={() => setEditorMode(editorMode === 'mix' ? null : 'mix')}>Mix Input</button>
               <button onClick={() => setEditorMode(editorMode === 'gradation' ? null : 'gradation')}>Gradation</button>
               <button>Orbit</button><button>Section</button><button>Ghost</button><button>Snapshot</button>
             </div>
           </div>
-          <ConcreteCube analysis={analysis} mix={mix} />
+          <ConcreteCube analysis={analysis} packing={packing} />
           {editorMode === 'mix' && <MixDesignEditor mix={mix} onChange={setMix} />}
           {editorMode === 'gradation' && <GradationEditor mix={mix} onChange={setMix} onClose={() => setEditorMode(null)} />}
         </section>
@@ -65,32 +68,32 @@ export function App() {
         <aside className="panel right-panel">
           <div className="panel-title">ENGINEERING INSPECTOR</div>
           <div className="status-card">
-            <span>Volume closure</span>
-            <strong className={volumeOk ? 'ok' : 'warn'}>{volumeOk ? 'ACCEPTABLE' : 'REVIEW MIX'}</strong>
+            <span>Packing state</span>
+            <strong className={packing.packingDensity >= 0.59 ? 'ok' : 'warn'}>{packingClass}</strong>
           </div>
           <div className="status-card gradation-status">
-            <span>Gradation data</span>
-            <strong className={gradationsValid ? 'ok' : 'warn'}>{gradationsValid ? 'VALID' : 'REVIEW PSD'}</strong>
+            <span>Gradation / volume</span>
+            <strong className={gradationsValid && volumeOk ? 'ok' : 'warn'}>{gradationsValid && volumeOk ? 'READY' : 'REVIEW INPUT'}</strong>
           </div>
           <div className="metric-grid">
             {metrics.map(([name, value]) => <div className="metric" key={name}><span>{name}</span><b>{value}</b></div>)}
           </div>
 
-          <div className="panel-title secondary">GRADATION SUMMARY</div>
+          <div className="panel-title secondary">PACKING DIAGNOSTICS</div>
           <div className="volume-list">
-            {mix.gradations.map((curve) => {
-              const result = analyzeGradation(curve);
-              return <div className="volume-row" key={curve.materialKey}><span>{curve.label}</span><b>D50 {result.d50 ? result.d50.toFixed(1) : '—'} mm</b></div>;
-            })}
+            <div className="volume-row"><span>Placed particles</span><b>{packing.particles.length}</b></div>
+            <div className="volume-row"><span>Rejected placements</span><b>{packing.rejectedPlacements}</b></div>
+            <div className="volume-row"><span>PSD continuity score</span><b>{(packing.continuityScore * 100).toFixed(0)} %</b></div>
+            <div className="volume-row"><span>Method</span><b>RSA v1</b></div>
           </div>
 
-          <button className="run" disabled={!gradationsValid}>RUN PACKING ANALYSIS</button>
+          <button className="run" disabled={!gradationsValid}>REGENERATE PACKING</button>
         </aside>
       </section>
 
       <footer className="statusbar">
         <span>TOLUE Concrete Compaction v0.1.0-alpha</span>
-        <span>SPECIMEN: 1.000 × 1.000 × 1.000 m • MASS + DENSITY + GRADATION MODEL</span>
+        <span>PACKING MODEL: STOCHASTIC RSA V1 • PSD + VOLUME DRIVEN</span>
       </footer>
     </main>
   );
