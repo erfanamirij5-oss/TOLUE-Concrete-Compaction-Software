@@ -1,5 +1,6 @@
 import type { PackingResult } from '../engineering/packing';
 import type { RebarNetworkInput } from '../domain/rebarAnalysis';
+import { analyzeRebarBridgeRisk } from '../engineering/rebarBridgeRisk';
 import './RebarLiveControls.css';
 
 interface Props {
@@ -20,10 +21,12 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
   const ratio=governing/dmax;
   const passing=Math.round(clamp((ratio-1)*42+38));
   const level=passing>=75?'good':passing>=50?'attention':'critical';
+  const bridge=analyzeRebarBridgeRisk(packing,network);
   const updateDir=(dir:'x'|'y',key:'barDiameterMm'|'centerSpacingMm',value:number)=>onChange({...network,[dir]:{...network[dir],[key]:Math.max(1,value)}});
   return <div className={`rebar-live ${level}`} dir="rtl">
-    <div className="rebar-live-head"><div><b>شبکه آرماتور — تحلیل زنده</b><small>اثر فوری بر هندسه، گلوگاه و Heatmap</small></div><button onClick={onToggleVisible}>{visible?'پنهان':'نمایش'}</button></div>
+    <div className="rebar-live-head"><div><b>شبکه آرماتور — تحلیل زنده</b><small>اثر فوری بر هندسه، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><button onClick={onToggleVisible}>{visible?'پنهان':'نمایش'}</button></div>
     <div className="rebar-live-score"><div><span>عبور سنگدانه</span><strong>{passing}/100</strong></div><div><span>گلوگاه</span><strong>{governing.toFixed(0)} mm</strong></div><div><span>Dmax نماینده</span><strong>{dmax.toFixed(1)} mm</strong></div></div>
+    <div className={`rebar-bridge-summary ${bridge.level}`}><div><span>ریسک پل‌زدگی</span><b>{bridge.score}/100</b></div><small>{bridge.candidateSharePercent}٪ ذرات درشت در محدوده حساس • {bridge.criticalSharePercent}٪ بحرانی</small><p>{bridge.messageFa}</p></div>
     <div className="rebar-live-grid">
       <label><span>قطر X</span><input type="number" min="1" value={network.x.barDiameterMm} onChange={e=>updateDir('x','barDiameterMm',Number(e.target.value))}/><i>mm</i></label>
       <label><span>فاصله X</span><input type="number" min="1" value={network.x.centerSpacingMm} onChange={e=>updateDir('x','centerSpacingMm',Number(e.target.value))}/><i>mm</i></label>
@@ -35,6 +38,6 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
       <label><span>قطر سر ویبراتور</span><input type="number" min="1" value={network.vibratorHeadDiameterMm} onChange={e=>onChange({...network,vibratorHeadDiameterMm:Math.max(1,Number(e.target.value))})}/><i>mm</i></label>
     </div>
     <p>{ratio<1.25?'گلوگاه به اندازه سنگدانه درشت نزدیک است؛ احتمال پل‌زدگی و محدودیت عبور بالاست.':ratio<1.8?'عبور ممکن است، اما شبکه متراکم است و اجرای تراکم باید کنترل شود.':'فضای عبور هندسی نسبت به Dmax نماینده مناسب ارزیابی می‌شود.'}</p>
-    <small className="rebar-live-note">Heuristic داخلی TOLUE — این شاخص کنترل استاندارد یا طراحی سازه‌ای نیست.</small>
+    <small className="rebar-live-note">Heuristic داخلی TOLUE — تشخیص پل‌زدگی فعلاً مبتنی بر PSD و نسبت اندازه ذره به گلوگاه است؛ مدل DEM یا کنترل استاندارد رسمی نیست.</small>
   </div>;
 }
