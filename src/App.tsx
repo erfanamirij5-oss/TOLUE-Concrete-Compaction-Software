@@ -12,10 +12,11 @@ type EditorMode = 'mix' | 'gradation' | null;
 export function App() {
   const [mix, setMix] = useState<MixDesign>(defaultMix);
   const [editorMode, setEditorMode] = useState<EditorMode>('mix');
+  const [packingSeed, setPackingSeed] = useState(20260905);
   const analysis = useMemo(() => analyzeMix(mix), [mix]);
   const gradationAnalyses = useMemo(() => mix.gradations.map(analyzeGradation), [mix.gradations]);
   const gradationsValid = gradationAnalyses.every((item) => item.valid);
-  const packing = useMemo(() => generatePacking(mix, analysis), [mix, analysis]);
+  const packing = useMemo(() => generatePacking(mix, analysis, packingSeed), [mix, analysis, packingSeed]);
 
   const metrics = [
     ['Packing density', `${(packing.packingDensity * 100).toFixed(1)} %`],
@@ -84,10 +85,11 @@ export function App() {
             <div className="volume-row"><span>Placed particles</span><b>{packing.particles.length}</b></div>
             <div className="volume-row"><span>Rejected placements</span><b>{packing.rejectedPlacements}</b></div>
             <div className="volume-row"><span>PSD continuity score</span><b>{(packing.continuityScore * 100).toFixed(0)} %</b></div>
+            <div className="volume-row"><span>Simulation seed</span><b>{packingSeed}</b></div>
             <div className="volume-row"><span>Method</span><b>RSA v1</b></div>
           </div>
 
-          <button className="run" disabled={!gradationsValid}>REGENERATE PACKING</button>
+          <button className="run" disabled={!gradationsValid} onClick={() => setPackingSeed((seed) => seed + 1)}>REGENERATE PACKING</button>
         </aside>
       </section>
 
