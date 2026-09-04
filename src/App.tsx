@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
 import { ConcreteCube } from './components/ConcreteCube';
+import { GradationEditor } from './components/GradationEditor';
 import { MixDesignEditor } from './components/MixDesignEditor';
 import { analyzeMix } from './engineering/analyzeMix';
+import { analyzeGradation } from './engineering/gradation';
 import { defaultMix, type MixDesign } from './domain/mixDesign';
+
+type EditorMode = 'mix' | 'gradation' | null;
 
 export function App() {
   const [mix, setMix] = useState<MixDesign>(defaultMix);
-  const [editorOpen, setEditorOpen] = useState(true);
+  const [editorMode, setEditorMode] = useState<EditorMode>('mix');
   const analysis = useMemo(() => analyzeMix(mix), [mix]);
+  const gradationAnalyses = useMemo(() => mix.gradations.map(analyzeGradation), [mix.gradations]);
+  const gradationsValid = gradationAnalyses.every((item) => item.valid);
 
   const metrics = [
     ['Total material volume', `${analysis.totalSolidAndLiquidVolumeM3.toFixed(3)} m³`],
@@ -33,10 +39,10 @@ export function App() {
       <section className="workspace">
         <aside className="panel left-panel">
           <div className="panel-title">PROJECT EXPLORER</div>
-          <button className="primary" onClick={() => setEditorOpen(true)}>+ Edit Mix Design</button>
+          <button className="primary" onClick={() => setEditorMode('mix')}>+ Edit Mix Design</button>
           <div className="tree active">◇ {mix.name}</div>
           <div className="tree">▦ Materials</div>
-          <div className="tree">◫ Gradation</div>
+          <button className="tree tree-button" onClick={() => setEditorMode('gradation')}>◫ Gradation <span className={gradationsValid ? 'tree-ok' : 'tree-warn'}>{gradationsValid ? '✓' : '!'}</span></button>
           <div className="tree">⬡ Simulation</div>
           <div className="tree">⇄ Comparison</div>
           <div className="tree">▤ Reports</div>
@@ -44,14 +50,16 @@ export function App() {
 
         <section className="viewport">
           <div className="viewport-toolbar">
-            <span>3D SPECIMEN</span>
+            <span>3D SPECIMEN • PSD DRIVEN</span>
             <div>
-              <button onClick={() => setEditorOpen((value) => !value)}>{editorOpen ? 'Hide Input' : 'Mix Input'}</button>
+              <button onClick={() => setEditorMode(editorMode === 'mix' ? null : 'mix')}>Mix Input</button>
+              <button onClick={() => setEditorMode(editorMode === 'gradation' ? null : 'gradation')}>Gradation</button>
               <button>Orbit</button><button>Section</button><button>Ghost</button><button>Snapshot</button>
             </div>
           </div>
-          <ConcreteCube analysis={analysis} />
-          {editorOpen && <MixDesignEditor mix={mix} onChange={setMix} />}
+          <ConcreteCube analysis={analysis} mix={mix} />
+          {editorMode === 'mix' && <MixDesignEditor mix={mix} onChange={setMix} />}
+          {editorMode === 'gradation' && <GradationEditor mix={mix} onChange={setMix} onClose={() => setEditorMode(null)} />}
         </section>
 
         <aside className="panel right-panel">
@@ -60,27 +68,29 @@ export function App() {
             <span>Volume closure</span>
             <strong className={volumeOk ? 'ok' : 'warn'}>{volumeOk ? 'ACCEPTABLE' : 'REVIEW MIX'}</strong>
           </div>
+          <div className="status-card gradation-status">
+            <span>Gradation data</span>
+            <strong className={gradationsValid ? 'ok' : 'warn'}>{gradationsValid ? 'VALID' : 'REVIEW PSD'}</strong>
+          </div>
           <div className="metric-grid">
             {metrics.map(([name, value]) => <div className="metric" key={name}><span>{name}</span><b>{value}</b></div>)}
           </div>
 
-          <div className="panel-title secondary">ABSOLUTE VOLUMES</div>
+          <div className="panel-title secondary">GRADATION SUMMARY</div>
           <div className="volume-list">
-            {analysis.materials.map((material) => (
-              <div className="volume-row" key={material.key}>
-                <span><i style={{ background: material.color }} />{material.label}</span>
-                <b>{material.absoluteVolumeM3.toFixed(3)} m³</b>
-              </div>
-            ))}
+            {mix.gradations.map((curve) => {
+              const result = analyzeGradation(curve);
+              return <div className="volume-row" key={curve.materialKey}><span>{curve.label}</span><b>D50 {result.d50 ? result.d50.toFixed(1) : '—'} mm</b></div>;
+            })}
           </div>
 
-          <button className="run">RUN PACKING ANALYSIS</button>
+          <button className="run" disabled={!gradationsValid}>RUN PACKING ANALYSIS</button>
         </aside>
       </section>
 
       <footer className="statusbar">
         <span>TOLUE Concrete Compaction v0.1.0-alpha</span>
-        <span>SPECIMEN: 1.000 × 1.000 × 1.000 m • LIVE ABSOLUTE-VOLUME MODEL</span>
+        <span>SPECIMEN: 1.000 × 1.000 × 1.000 m • MASS + DENSITY + GRADATION MODEL</span>
       </footer>
     </main>
   );
