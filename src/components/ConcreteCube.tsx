@@ -1,14 +1,14 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useMemo } from 'react';
+import * as THREE from 'three';
+import type { MixAnalysis } from '../domain/mixDesign';
 
-const phases = [
-  { count: 55, radius: 0.055, color: '#7c858c' },
-  { count: 110, radius: 0.034, color: '#a28f78' },
-  { count: 190, radius: 0.018, color: '#c6ad79' },
-];
+interface Props {
+  analysis: MixAnalysis;
+}
 
-function Particles() {
+function Particles({ analysis }: Props) {
   const particles = useMemo(() => {
     let seed = 20260905;
     const random = () => {
@@ -16,15 +16,24 @@ function Particles() {
       return seed / 4294967296;
     };
 
-    return phases.flatMap((phase, phaseIndex) =>
-      Array.from({ length: phase.count }, (_, index) => ({
+    const particlePhases = analysis.materials.filter((material) =>
+      ['fine', 'intermediate', 'coarse'].includes(material.phase),
+    );
+
+    return particlePhases.flatMap((phase, phaseIndex) => {
+      const radius = phase.phase === 'coarse' ? 0.052 : phase.phase === 'intermediate' ? 0.034 : 0.017;
+      const baseCount = phase.phase === 'coarse' ? 60 : phase.phase === 'intermediate' ? 100 : 180;
+      const count = Math.max(1, Math.round(baseCount * Math.min(1.7, phase.absoluteVolumeM3 / 0.22)));
+
+      return Array.from({ length: count }, (_, index) => ({
         key: `${phaseIndex}-${index}`,
         position: [random() - 0.5, random() - 0.5, random() - 0.5] as [number, number, number],
-        scale: 0.65 + random() * 0.7,
-        ...phase,
-      })),
-    );
-  }, []);
+        scale: 0.62 + random() * 0.75,
+        radius,
+        color: phase.color,
+      }));
+    });
+  }, [analysis]);
 
   return (
     <>
@@ -38,16 +47,28 @@ function Particles() {
   );
 }
 
-function Scene() {
+function PastePhase({ analysis }: Props) {
+  const pasteFraction = Math.min(0.92, Math.max(0.08, analysis.pasteVolumeM3));
+  const scale = Math.cbrt(pasteFraction);
+  return (
+    <mesh scale={[scale, scale, scale]}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshPhysicalMaterial color="#68757f" transparent opacity={0.13} roughness={0.34} depthWrite={false} />
+    </mesh>
+  );
+}
+
+function Scene({ analysis }: Props) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[1.45, 1.05, 1.55]} fov={42} />
       <ambientLight intensity={1.3} />
       <directionalLight position={[3, 4, 2]} intensity={2.4} />
-      <Particles />
+      <PastePhase analysis={analysis} />
+      <Particles analysis={analysis} />
       <mesh>
         <boxGeometry args={[1, 1, 1]} />
-        <meshPhysicalMaterial transparent opacity={0.09} roughness={0.08} metalness={0.05} transmission={0.45} depthWrite={false} />
+        <meshPhysicalMaterial transparent opacity={0.08} roughness={0.08} metalness={0.05} transmission={0.45} depthWrite={false} />
       </mesh>
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(1, 1, 1)]} />
@@ -59,15 +80,13 @@ function Scene() {
   );
 }
 
-import * as THREE from 'three';
-
-export function ConcreteCube() {
+export function ConcreteCube({ analysis }: Props) {
   return (
     <div className="viewport-canvas">
       <Canvas gl={{ antialias: true, alpha: true }}>
-        <Scene />
+        <Scene analysis={analysis} />
       </Canvas>
-      <div className="axis-label">1.000 m³ • Interactive specimen</div>
+      <div className="axis-label">1.000 m³ • volume-driven visualization</div>
     </div>
   );
 }
