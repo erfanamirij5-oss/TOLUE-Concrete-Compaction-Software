@@ -4,6 +4,11 @@ export interface PhaseVisibility {
   sand: boolean;
   aggregate5to12: boolean;
   aggregate12to25: boolean;
+  cement: boolean;
+  water: boolean;
+  silicaFume: boolean;
+  admixture: boolean;
+  air: boolean;
   paste: boolean;
 }
 
@@ -26,6 +31,11 @@ export const defaultViewControls: ViewControls = {
     sand: true,
     aggregate5to12: true,
     aggregate12to25: true,
+    cement: true,
+    water: true,
+    silicaFume: true,
+    admixture: true,
+    air: true,
     paste: true,
   },
 };
