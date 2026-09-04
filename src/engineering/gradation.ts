@@ -88,7 +88,8 @@ export function analyzeGradation(curve: GradationCurve): GradationAnalysis {
 export function sampleDiameterMm(curve: GradationCurve, randomValue: number): number {
   const analysis = analyzeGradation(curve);
   const active = analysis.bands.filter((b) => b.retainedFraction > 0);
-  if (!active.length) return curve.points.at(-1)?.sieveMm ?? 1;
+  const lastPoint = curve.points.length ? curve.points[curve.points.length - 1] : undefined;
+  if (!active.length) return lastPoint?.sieveMm ?? 1;
 
   const total = active.reduce((sum, b) => sum + b.retainedFraction, 0);
   let target = clamp(randomValue, 0, 0.999999) * total;
