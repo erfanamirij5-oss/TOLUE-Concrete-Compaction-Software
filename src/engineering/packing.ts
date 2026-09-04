@@ -24,7 +24,7 @@ export interface PackingResult {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-function seededRandom(seedValue = 20260905) {
+function seededRandom(seedValue: number) {
   let seed = seedValue >>> 0;
   return () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -43,8 +43,8 @@ function gradationContinuity(mix: MixDesign) {
   return scores.reduce((sum, value) => sum + value, 0) / scores.length;
 }
 
-export function generatePacking(mix: MixDesign, analysis: MixAnalysis): PackingResult {
-  const random = seededRandom();
+export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20260905): PackingResult {
+  const random = seededRandom(seed);
   const phases = analysis.materials.filter((m) => ['fine', 'intermediate', 'coarse'].includes(m.phase));
   const desired: PackedParticle[] = [];
 
