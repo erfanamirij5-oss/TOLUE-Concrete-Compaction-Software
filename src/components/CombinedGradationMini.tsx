@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
 import { analyzeCombinedGradation } from '../engineering/combinedGradation';
 import { GRADATION_ENVELOPES, interpolateEnvelope, type GradationEnvelopePoint, type GradationEnvelopePreset } from '../engineering/combinedGradationEnvelope';
@@ -12,9 +13,11 @@ export function CombinedGradationMini({ mix, analysis }: Props) {
   const result=useMemo(()=>analyzeCombinedGradation(mix,analysis),[mix,analysis]);
   const baseline=useMemo(()=>baselineGradationShares(mix,analysis),[mix,analysis]);
   const [expanded,setExpanded]=useState(false);
+  const [dockTarget,setDockTarget]=useState<Element|null>(null);
   const [preset,setPreset]=useState<GradationEnvelopePreset>('aci-normal');
   const [custom,setCustom]=useState<GradationEnvelopePoint[]>(GRADATION_ENVELOPES['aci-normal'].points.map(p=>({...p})));
   const [blend,setBlend]=useState<GradationBlendShares>(baseline);
+  useEffect(()=>{setDockTarget(document.querySelector('.right-panel .metric-grid'));},[]);
   const lab=useMemo(()=>evaluateGradationDesignLab(mix,analysis,blend),[mix,analysis,blend]);
   const envelope=preset==='custom'?{...GRADATION_ENVELOPES.custom,points:custom}:GRADATION_ENVELOPES[preset];
   const points=expanded?lab.points:result.points; const maxSieve=points[0]?.sieveMm??25; const minSieve=points[points.length-1]?.sieveMm??0.075;
@@ -30,7 +33,8 @@ export function CombinedGradationMini({ mix, analysis }: Props) {
   const edit=(i:number,key:'lower'|'upper',value:number)=>setCustom(c=>c.map((p,n)=>n===i?{...p,[key]:Math.max(0,Math.min(100,value))}:p));
   const setShare=(key:keyof GradationBlendShares,value:number)=>setBlend(current=>({...current,[key]:Math.max(0,Math.min(100,value))}));
   const resetBlend=()=>setBlend(baseline);
-  return <div className={`combined-mini ${expanded?'combined-mini-expanded':''}`} dir="rtl">
+  if(!dockTarget&&!expanded)return null;
+  const card=<div className={`combined-mini ${expanded?'combined-mini-expanded':'combined-mini-docked'}`} dir="rtl" role={expanded?'dialog':undefined} aria-modal={expanded?true:undefined}>
     <div className="combined-mini-head"><div><b>{expanded?'Combined Gradation Design Lab':'منحنی دانه‌بندی کل'}</b><span>{expanded?'طراحی و مقایسه Blend بدون تغییر طرح اصلی':`${envelope.labelFa} • حد بالا/پایین`}</span></div><div className="combined-mini-actions"><strong>{expanded?lab.continuityScore:result.continuityScore}</strong><button onClick={()=>setExpanded(v=>!v)}>{expanded?'بستن آزمایشگاه':'Design Lab'}</button></div></div>
     {expanded&&<div className={`gradation-lab-kpis ${lab.level}`}><div><span>Continuity</span><b>{lab.continuityScore}</b></div><div><span>Packing Proxy</span><b>{lab.packingProxyPercent}٪</b></div><div><span>Void Proxy</span><b>{lab.voidProxyPercent}٪</b></div><div><span>Paste Demand</span><b>{lab.pasteDemandIndex}</b></div><div><span>Risk</span><b>{lab.riskScore}</b></div></div>}
     <div className="combined-chart-shell"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="منحنی دانه‌بندی کل و محدوده راهنما">
@@ -55,4 +59,5 @@ export function CombinedGradationMini({ mix, analysis }: Props) {
       <small className="gradation-lab-note">{lab.noteFa}</small>
     </div>}
   </div>;
+  return createPortal(expanded?<><div className="combined-lab-backdrop" onClick={()=>setExpanded(false)} aria-hidden="true"/>{card}</>:card,expanded?document.body:dockTarget!);
 }
