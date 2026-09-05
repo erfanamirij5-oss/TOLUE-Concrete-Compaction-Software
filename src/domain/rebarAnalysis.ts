@@ -12,6 +12,12 @@ export interface RebarNetworkInput {
   coverMm: number;
   memberThicknessMm: number;
   vibratorHeadDiameterMm: number;
+  /** Render reinforcement through the full concrete volume, not only the perimeter cage. */
+  internalGrid?: boolean;
+  /** Approximate centre spacing of interior vertical connectors / bars. */
+  interiorVerticalSpacingMm?: number;
+  /** Keep secondary ties visible between horizontal reinforcement layers. */
+  internalTies?: boolean;
 }
 
 export type ReinforcedPlacementLevel = 'good' | 'attention' | 'critical';
@@ -41,4 +47,7 @@ export const defaultRebarNetwork: RebarNetworkInput = {
   coverMm: 40,
   memberThicknessMm: 250,
   vibratorHeadDiameterMm: 38,
+  internalGrid: true,
+  interiorVerticalSpacingMm: 300,
+  internalTies: true,
 };
