@@ -11,11 +11,12 @@ interface Props {
   onChange: (network: RebarNetworkInput) => void;
   visible: boolean;
   onToggleVisible: () => void;
+  onClose?: () => void;
 }
 
 const clamp=(v:number,min=0,max=100)=>Math.min(max,Math.max(min,v));
 
-export function RebarLiveControls({network,packing,onChange,visible,onToggleVisible}:Props){
+export function RebarLiveControls({network,packing,onChange,visible,onToggleVisible,onClose}:Props){
   useEffect(()=>{ onChange(loadRebarScenario()); },[]);
   const commit=(next:RebarNetworkInput)=>{ saveRebarScenario(next); onChange(next); };
   const dmax=Math.max(1,...packing.particles.map(p=>p.diameterMm||0));
@@ -28,20 +29,20 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
   const bridge=analyzeRebarBridgeRisk(packing,network);
   const updateDir=(dir:'x'|'y',key:'barDiameterMm'|'centerSpacingMm',value:number)=>commit({...network,[dir]:{...network[dir],[key]:Math.max(1,value)}});
   return <div className={`rebar-live ${level}`} dir="rtl">
-    <div className="rebar-live-head"><div><b>شبکه آرماتور — تحلیل زنده</b><small>اثر فوری بر هندسه، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><button onClick={onToggleVisible}>{visible?'پنهان':'نمایش'}</button></div>
+    <div className="rebar-live-head"><div><b>آرماتور فونداسیون ۱ مترمکعبی</b><small>شبکه بالا و پایین، کاور، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><div className="rebar-head-actions"><button onClick={onToggleVisible}>{visible?'پنهان‌کردن شبکه':'نمایش شبکه'}</button>{onClose&&<button className="panel-close" title="بستن" aria-label="بستن پنل آرماتور" onClick={onClose}>×</button>}</div></div>
     <div className="rebar-live-score"><div><span>عبور سنگدانه</span><strong>{passing}/100</strong></div><div><span>گلوگاه</span><strong>{governing.toFixed(0)} mm</strong></div><div><span>Dmax نماینده</span><strong>{dmax.toFixed(1)} mm</strong></div></div>
     <div className={`rebar-bridge-summary ${bridge.level}`}><div><span>ریسک پل‌زدگی</span><b>{bridge.score}/100</b></div><small>{bridge.candidateSharePercent}٪ ذرات درشت در محدوده حساس • {bridge.criticalSharePercent}٪ بحرانی</small><p>{bridge.messageFa}</p></div>
     <div className="rebar-live-grid">
-      <label><span>قطر X</span><input type="number" min="1" value={network.x.barDiameterMm} onChange={e=>updateDir('x','barDiameterMm',Number(e.target.value))}/><i>mm</i></label>
-      <label><span>فاصله X</span><input type="number" min="1" value={network.x.centerSpacingMm} onChange={e=>updateDir('x','centerSpacingMm',Number(e.target.value))}/><i>mm</i></label>
-      <label><span>قطر Y</span><input type="number" min="1" value={network.y.barDiameterMm} onChange={e=>updateDir('y','barDiameterMm',Number(e.target.value))}/><i>mm</i></label>
-      <label><span>فاصله Y</span><input type="number" min="1" value={network.y.centerSpacingMm} onChange={e=>updateDir('y','centerSpacingMm',Number(e.target.value))}/><i>mm</i></label>
-      <label><span>تعداد لایه</span><input type="number" min="1" max="6" value={network.layers} onChange={e=>commit({...network,layers:Math.max(1,Math.min(6,Number(e.target.value)))})}/><i>لایه</i></label>
+      <label><span>قطر میلگرد X</span><input type="number" min="1" value={network.x.barDiameterMm} onChange={e=>updateDir('x','barDiameterMm',Number(e.target.value))}/><i>mm</i></label>
+      <label><span>فاصله محور X</span><input type="number" min="1" value={network.x.centerSpacingMm} onChange={e=>updateDir('x','centerSpacingMm',Number(e.target.value))}/><i>mm</i></label>
+      <label><span>قطر میلگرد Y</span><input type="number" min="1" value={network.y.barDiameterMm} onChange={e=>updateDir('y','barDiameterMm',Number(e.target.value))}/><i>mm</i></label>
+      <label><span>فاصله محور Y</span><input type="number" min="1" value={network.y.centerSpacingMm} onChange={e=>updateDir('y','centerSpacingMm',Number(e.target.value))}/><i>mm</i></label>
+      <label><span>تعداد شبکه ارتفاعی</span><input type="number" min="2" max="6" value={Math.max(2,network.layers)} onChange={e=>commit({...network,layers:Math.max(2,Math.min(6,Number(e.target.value)))})}/><i>لایه</i></label>
       <label><span>فاصله خالص لایه‌ها</span><input type="number" min="1" value={network.clearLayerSpacingMm} onChange={e=>commit({...network,clearLayerSpacingMm:Math.max(1,Number(e.target.value))})}/><i>mm</i></label>
-      <label><span>کاور</span><input type="number" min="0" max="450" value={network.coverMm} onChange={e=>commit({...network,coverMm:Math.max(0,Number(e.target.value))})}/><i>mm</i></label>
+      <label><span>کاور بتن</span><input type="number" min="15" max="200" value={network.coverMm} onChange={e=>commit({...network,coverMm:Math.max(15,Math.min(200,Number(e.target.value)))})}/><i>mm</i></label>
       <label><span>قطر سر ویبراتور</span><input type="number" min="1" value={network.vibratorHeadDiameterMm} onChange={e=>commit({...network,vibratorHeadDiameterMm:Math.max(1,Number(e.target.value))})}/><i>mm</i></label>
     </div>
     <p>{ratio<1.25?'گلوگاه به اندازه سنگدانه درشت نزدیک است؛ احتمال پل‌زدگی و محدودیت عبور بالاست.':ratio<1.8?'عبور ممکن است، اما شبکه متراکم است و اجرای تراکم باید کنترل شود.':'فضای عبور هندسی نسبت به Dmax نماینده مناسب ارزیابی می‌شود.'}</p>
-    <small className="rebar-live-note">سناریوی آرماتور ذخیره می‌شود و همان سناریو در گزارش‌ها و رتبه‌بندی اجرا استفاده خواهد شد. Heuristic داخلی TOLUE — تشخیص پل‌زدگی فعلاً مبتنی بر PSD و نسبت اندازه ذره به گلوگاه است؛ مدل DEM یا کنترل استاندارد رسمی نیست.</small>
+    <small className="rebar-live-note">سناریوی آرماتور ذخیره می‌شود و همان سناریو در گزارش‌ها و رتبه‌بندی اجرا استفاده خواهد شد. تحلیل پل‌زدگی Heuristic داخلی TOLUE است و جایگزین کنترل سازه‌ای یا مدل DEM نیست.</small>
   </div>;
 }
