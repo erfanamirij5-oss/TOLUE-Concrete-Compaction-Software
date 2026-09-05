@@ -5,6 +5,7 @@ import { App } from './App';
 import './styles.css';
 import './persian.css';
 import './font.css';
+import './standards.css';
 import './heatmap.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
