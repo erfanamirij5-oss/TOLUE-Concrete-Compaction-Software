@@ -1,52 +1,43 @@
+import { useEffect, useState } from 'react';
 import type { ConcreteProject } from '../domain/project';
 import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
 import type { DiagnosticSummary } from '../engineering/diagnostics';
 import type { PackingResult } from '../engineering/packing';
 import { evaluateCompaction } from '../engineering/compaction';
-import { evaluateCoupledPlacement } from '../engineering/coupledPlacement';
 import { evaluateFinalAssessment } from '../engineering/finalAssessment';
 import { evaluateReferenceCompliance } from '../engineering/referenceCompliance';
+import { evaluateSelectedStandards } from '../standards/standardReport';
+import { captureViewportSnapshots } from '../services/reportExport';
 import { printFormalEngineeringReport } from '../services/formalPdfReport';
-import { downloadSnapshot, exportAIAnalysisPackage, exportEngineeringReport, exportProjectAssessmentCsv, exportProjectAssessmentReport } from '../services/reportExport';
-import { exportPlacementAssessmentReport, exportProjectPlacementAssessmentCsv, exportProjectPlacementAssessmentReport } from '../services/placementReportExport';
-import { loadRebarScenario } from '../services/rebarScenarioStore';
+import { saveEngineeringHtml, saveEngineeringJson, saveProjectCsv, saveViewportPng } from '../services/exportCenter';
 import { ACIStandardsPanel } from './ACIStandardsPanel';
 import { ASTMStandardsPanel } from './ASTMStandardsPanel';
 
-interface Props {
-  project: ConcreteProject;
-  mix: MixDesign;
-  analysis: MixAnalysis;
-  packing: PackingResult;
-  diagnostics: DiagnosticSummary;
-  onClose: () => void;
-}
+interface Props { project: ConcreteProject; mix: MixDesign; analysis: MixAnalysis; packing: PackingResult; diagnostics: DiagnosticSummary; onClose: () => void; }
+type Tab = 'overview' | 'standards' | 'diagnostics';
 
 export function ReportPanel(props: Props) {
-  const context = { project: props.project, mix: props.mix, analysis: props.analysis, packing: props.packing, diagnostics: props.diagnostics };
-  const compliance=evaluateReferenceCompliance(props.mix);
-  const completed=evaluateCompaction(props.packing,1);
-  const final=evaluateFinalAssessment(props.mix,props.analysis,props.packing,props.diagnostics,compliance,completed);
-  const rebarScenario=loadRebarScenario();
-  const placement=evaluateCoupledPlacement(props.mix,props.analysis,props.packing,completed,rebarScenario);
-  return <div className="editor-overlay report-panel" dir="rtl">
-    <div className="editor-header"><div><b>خروجی، گزارش و کنترل استاندارد</b><span>ACI 318-25، ASTM C33/C33M، گزارش تکی، PDF، رتبه‌بندی پروژه، سناریوی آرماتور و بسته تحلیل AI</span></div><button onClick={props.onClose}>×</button></div>
-    <div className="report-summary-grid">
-      <div><span>پروژه</span><b>{props.project.metadata.projectNumber}</b><small>{props.project.metadata.name}</small></div>
-      <div><span>طرح فعال</span><b>{props.mix.name}</b><small>{props.project.mixes.length} طرح در پروژه</small></div>
-      <div><span>امتیاز خود بتن</span><b>{final.score}/100</b><small>{final.rankFa} • {final.labelFa}</small></div>
-      <div><span>قابلیت اجرا در آرماتور</span><b>{placement.score}/100</b><small>{placement.rankFa} • {placement.labelFa}</small></div>
-    </div>
-    <ACIStandardsPanel analysis={props.analysis}/>
-    <ASTMStandardsPanel mix={props.mix} analysis={props.analysis}/>
-    <div className="report-export-cards">
-      <article><b>گزارش تکی طرح بتن</b><p>گزارش کامل همین طرح شامل نمره نهایی از ۱۰۰، سطح A تا E، دانه‌بندی، بسته‌بندی، تراکم مؤثر، هشدارها، جدول مصالح، کنترل استاندارد و تصویر سه‌بعدی.</p><button className="primary-action" onClick={() => exportEngineeringReport(context)}>خروجی گزارش تکی بتن</button><button onClick={() => printFormalEngineeringReport(context)}>چاپ / ذخیره PDF رسمی A4</button></article>
-      <article><b>گزارش تکی قابلیت اجرا در آرماتور</b><p>نمره مستقل ۰ تا ۱۰۰ برای عبور و تراکم در شبکه آرماتور، شامل Effective Compaction، Bridge Safety، Heatmap موضعی، عبور سنگدانه و دسترسی ویبراتور.</p><button className="primary-action" onClick={() => exportPlacementAssessmentReport(context,rebarScenario)}>خروجی گزارش آرماتور</button></article>
-      <article><b>گزارش تجمیعی همه طرح‌ها</b><p>تمام طرح‌های پروژه با Seed یکسان ارزیابی و بر اساس کیفیت خود بتن از بهترین تا ضعیف‌ترین رتبه‌بندی می‌شوند.</p><button className="primary-action" onClick={() => exportProjectAssessmentReport(props.project)}>رتبه‌بندی طرح‌های بتن</button><button onClick={() => exportProjectAssessmentCsv(props.project)}>CSV طرح‌های بتن</button></article>
-      <article><b>رتبه‌بندی در سناریوی آرماتور</b><p>همه طرح‌ها در همان شبکه آرماتور ذخیره‌شده مقایسه می‌شوند تا مشخص شود کدام طرح برای بتن‌ریزی و تراکم در آن گلوگاه مناسب‌تر است.</p><button className="primary-action" onClick={() => exportProjectPlacementAssessmentReport(props.project,rebarScenario)}>رتبه‌بندی اجرای آرماتور</button><button onClick={() => exportProjectPlacementAssessmentCsv(props.project,rebarScenario)}>CSV اجرای آرماتور</button></article>
-      <article><b>تصویر سه‌بعدی / مقطع</b><p>نمای فعلی Three.js را به PNG تبدیل می‌کند. در حالت مقایسه، هر نمونه به‌صورت تصویر جداگانه خروجی می‌شود.</p><button onClick={() => downloadSnapshot(`${props.project.metadata.projectNumber}-${props.mix.name}`)}>خروجی PNG</button></article>
-      <article><b>بسته تحلیل هوش مصنوعی</b><p>فایل JSON شامل ورودی کامل طرح، نمره نهایی، شاخص‌های مهندسی، هشدارها، هویت محصول، Prompt و تصاویر فعلی ایجاد می‌شود.</p><button onClick={() => exportAIAnalysisPackage(context)}>خروجی بسته AI</button></article>
-    </div>
-    <div className="ai-review-warning">سناریوی آرماتور در تحلیل سه‌بعدی ذخیره می‌شود و همین سناریو در نمره قابلیت اجرا و خروجی‌های آرماتور استفاده می‌شود. دکمه PDF یک گزارش رسمی A4 مستقل از رابط کاربری می‌سازد و پنجره چاپ ویندوز را باز می‌کند؛ کاربر می‌تواند Microsoft Print to PDF یا چاپگر فیزیکی را انتخاب کند. کنترل ACI 318-25 و ASTM C33/C33M از شاخص‌های Heuristic داخلی TOLUE جدا هستند.</div>
+  const context = { project:props.project, mix:props.mix, analysis:props.analysis, packing:props.packing, diagnostics:props.diagnostics };
+  const completed = evaluateCompaction(props.packing, 1);
+  const final = evaluateFinalAssessment(props.mix, props.analysis, props.packing, props.diagnostics, evaluateReferenceCompliance(props.mix), completed);
+  const standards = evaluateSelectedStandards(props.mix, props.analysis);
+  const [tab,setTab] = useState<Tab>('overview');
+  const [preview,setPreview] = useState('');
+  const [busy,setBusy] = useState('');
+  const [notice,setNotice] = useState('');
+  useEffect(()=>{ setPreview(captureViewportSnapshots()[0] ?? ''); },[]);
+  const run = async (label:string, action:()=>Promise<unknown>|unknown) => { try { setBusy(label); setNotice(''); await action(); setNotice(`${label} انجام شد.`); } catch(e) { setNotice(`خطا در ${label}: ${e instanceof Error ? e.message : String(e)}`); } finally { setBusy(''); } };
+  return <div className="export-center" dir="rtl">
+    <header className="export-center-head"><div><span>مرکز گزارش و خروجی مهندسی</span><h2>{props.project.metadata.projectNumber} <i>•</i> {props.mix.name}</h2><small>رندر سه‌بعدی + نتایج تحلیل + کنترل استاندارد + خروجی Native ویندوز</small></div><button className="export-close" onClick={props.onClose} aria-label="بستن">×</button></header>
+    <nav className="export-tabs"><button className={tab==='overview'?'active':''} onClick={()=>setTab('overview')}>داشبورد خروجی</button><button className={tab==='standards'?'active':''} onClick={()=>setTab('standards')}>کنترل استاندارد</button><button className={tab==='diagnostics'?'active':''} onClick={()=>setTab('diagnostics')}>نتایج تشخیص</button></nav>
+    <main className="export-center-body">
+      {tab==='overview' && <>
+        <section className="export-hero"><div className="export-render"><div className="export-section-title"><b>نمای سه‌بعدی مهندسی</b><span>تصویر خالص Viewport بدون منوها و پنل‌های نرم‌افزار</span></div><div className="export-render-frame">{preview?<img src={preview} alt="رندر سه‌بعدی طرح"/>:<div className="export-empty">نمای سه‌بعدی در دسترس نیست</div>}</div></div><aside className="export-score"><span>امتیاز نهایی TOLUE</span><strong>{final.score}</strong><b>{final.rankFa} • {final.labelFa}</b><div><span>ACI 318-25</span><b>{standards.aci.labelFa}</b></div><div><span>ASTM C33</span><b>{standards.astm.status==='compliant'?'مطابق':standards.astm.status==='noncompliant'?'نامطابق':'داده ناکافی'}</b></div></aside></section>
+        <section className="export-metrics"><div><span>تراکم مؤثر</span><b>{final.effectiveCompactionScore}/100</b></div><div><span>دانه‌بندی</span><b>{final.gradationScore}/100</b></div><div><span>بسته‌بندی</span><b>{final.packingScore}/100</b></div><div><span>تشخیص مهندسی</span><b>{final.diagnosticsScore}/100</b></div><div><span>w/cm</span><b>{props.analysis.wCm.toFixed(3)}</b></div><div><span>Packing</span><b>{(props.packing.packingDensity*100).toFixed(1)}%</b></div></section>
+        <section className="export-actions"><div className="export-section-title"><b>خروجی‌های پروژه</b><span>هر دکمه پنجره Save As واقعی ویندوز را باز می‌کند.</span></div><div className="export-action-grid"><button className="export-action primary" disabled={!!busy} onClick={()=>run('گزارش رسمی PDF',()=>printFormalEngineeringReport(context))}><b>PDF رسمی A4</b><span>گزارش تحلیلی همراه رندر سه‌بعدی</span></button><button className="export-action" disabled={!!busy} onClick={()=>run('رندر PNG',()=>saveViewportPng(context))}><b>رندر PNG</b><span>فقط نمای سه‌بعدی مهندسی</span></button><button className="export-action" disabled={!!busy} onClick={()=>run('گزارش HTML',()=>saveEngineeringHtml(context))}><b>گزارش HTML</b><span>رندر + امتیازها + تحلیل‌ها</span></button><button className="export-action" disabled={!!busy} onClick={()=>run('CSV پروژه',()=>saveProjectCsv(props.project))}><b>CSV پروژه</b><span>داده طرح‌ها برای Excel</span></button><button className="export-action" disabled={!!busy} onClick={()=>run('بسته تحلیل JSON',()=>saveEngineeringJson(context))}><b>JSON / AI</b><span>بسته داده مهندسی قابل پردازش</span></button></div>{notice&&<div className="export-notice">{notice}</div>}</section>
+      </>}
+      {tab==='standards' && <section className="export-detail"><ACIStandardsPanel analysis={props.analysis}/><ASTMStandardsPanel mix={props.mix} analysis={props.analysis}/></section>}
+      {tab==='diagnostics' && <section className="export-detail"><div className="export-section-title"><b>تشخیص‌های مهندسی</b><span>جمع‌بندی تحلیل طرح فعال</span></div>{props.diagnostics.items.length?props.diagnostics.items.map(d=><article className="export-diagnostic" key={d.id}><b>{d.title}</b><p>{d.observation}</p><small>{d.recommendation}</small></article>):<div className="export-empty">هشدار مهندسی فعالی ثبت نشده است.</div>}</section>}
+    </main>
   </div>;
 }
