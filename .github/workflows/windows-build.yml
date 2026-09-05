@@ -37,11 +37,11 @@ jobs:
           $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "NSIS silent install failed with exit code $($install.ExitCode)." }
 
-          $appExe = Get-ChildItem $env:LOCALAPPDATA -Filter 'TOLUE Concrete Compaction.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          $appExe = Get-ChildItem $env:LOCALAPPDATA -Filter 'tolue-concrete-compaction-software.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $appExe) { throw 'Installed TOLUE executable was not found after NSIS install.' }
           Write-Host "Installed executable: $($appExe.FullName)"
 
-          $uninstaller = Get-ChildItem $appExe.DirectoryName -Filter 'uninstall.exe' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          $uninstaller = Get-ChildItem $appExe.DirectoryName -Filter '*uninstall*.exe' -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $uninstaller) { throw 'NSIS uninstaller was not found.' }
           $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "NSIS silent uninstall failed with exit code $($uninstall.ExitCode)." }
@@ -57,7 +57,7 @@ jobs:
           $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$($msi.FullName)`" /quiet /norestart" -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "MSI silent install failed with exit code $($install.ExitCode)." }
 
-          $installed = Get-ChildItem 'C:\Program Files','C:\Program Files (x86)',$env:LOCALAPPDATA -Filter 'TOLUE Concrete Compaction.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          $installed = Get-ChildItem 'C:\Program Files','C:\Program Files (x86)',$env:LOCALAPPDATA -Filter 'tolue-concrete-compaction-software.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $installed) { throw 'Installed TOLUE executable was not found after MSI install.' }
           Write-Host "MSI installed executable: $($installed.FullName)"
 
