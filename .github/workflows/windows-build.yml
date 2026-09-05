@@ -21,6 +21,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm install
+      - name: Run engineering validation gate
+        run: npm test
       - name: Generate TOLUE desktop icons
         run: npm run tauri icon src-tauri/app-icon.svg
       - name: Build TOLUE Concrete Compaction
