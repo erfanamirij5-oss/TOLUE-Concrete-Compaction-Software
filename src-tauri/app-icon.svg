@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffad23"/><stop offset="0.55" stop-color="#ff7a00"/><stop offset="1" stop-color="#ed5d00"/></linearGradient>
+    <linearGradient id="gear" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#162b40"/><stop offset="1" stop-color="#061525"/></linearGradient>
+    <linearGradient id="concreteTop" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dedede"/><stop offset="1" stop-color="#a9aaac"/></linearGradient>
+    <linearGradient id="concreteSide" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bfc0c2"/><stop offset="1" stop-color="#85888b"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#07111f" flood-opacity=".38"/></filter>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence baseFrequency=".7" numOctaves="3" seed="9" type="fractalNoise" result="n"/><feComposite in="n" in2="SourceGraphic" operator="in" result="t"/><feBlend in="SourceGraphic" in2="t" mode="multiply"/></filter>
+  </defs>
+  <rect width="1024" height="1024" rx="225" fill="url(#bg)"/>
+  <g filter="url(#shadow)" transform="translate(512 512)">
+    <path fill="url(#gear)" d="M-72-330h144l25 91 65 27 83-47 102 102-47 83 27 65 91 25v144l-91 25-27 65 47 83-102 102-83-47-65 27-25 91H-72l-25-91-65-27-83 47-102-102 47-83-27-65-91-25V16l91-25 27-65-47-83 102-102 83 47 65-27z"/>
+    <circle r="205" fill="#081829" stroke="#ff7a00" stroke-width="38"/>
+    <g stroke="#081829" stroke-width="26" stroke-linejoin="round">
+      <path d="M0-130 142-49 0 32-142-49Z" fill="url(#concreteTop)" filter="url(#grain)"/>
+      <path d="M-142-49 0 32 0 195-142 114Z" fill="url(#concreteTop)" filter="url(#grain)"/>
+      <path d="M142-49 0 32 0 195 142 114Z" fill="url(#concreteSide)" filter="url(#grain)"/>
+    </g>
+  </g>
+</svg>
