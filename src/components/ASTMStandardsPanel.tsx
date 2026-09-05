@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import type { MixAnalysis, MixDesign } from '../domain/mixDesign';
 import { ASTM_COARSE_SIZE_OPTIONS, evaluateASTMC33Compliance, type ASTMCoarseSizeNo, type ASTMComplianceStatus } from '../standards/astmC33_24a';
+import { loadStandardsSettings, saveStandardsSettings } from '../standards/standardsSettings';
 
 const label=(status:ASTMComplianceStatus)=>status==='compliant'?'مطابق':status==='noncompliant'?'نامطابق':'داده ناکافی';
 const cls=(status:ASTMComplianceStatus)=>status==='compliant'?'ok':status==='noncompliant'?'risk':'warn';
 
 export function ASTMStandardsPanel({mix,analysis}:{mix:MixDesign;analysis:MixAnalysis}){
-  const [coarseSizeNo,setCoarseSizeNo]=useState<ASTMCoarseSizeNo>('57');
+  const [coarseSizeNo,setCoarseSizeNoState]=useState<ASTMCoarseSizeNo>(()=>loadStandardsSettings().astm.coarseSizeNo);
+  const setCoarseSizeNo=(value:ASTMCoarseSizeNo)=>{
+    setCoarseSizeNoState(value);
+    const current=loadStandardsSettings();
+    saveStandardsSettings({...current,astm:{...current.astm,coarseSizeNo:value}});
+  };
   const result=evaluateASTMC33Compliance(mix,analysis,coarseSizeNo);
   return <section className="combined-gradation-panel">
     <div className="combined-head"><div><b>کنترل استاندارد دانه‌بندی ASTM</b><span>{result.standard} • روش آزمون {result.testMethod}</span></div><strong className={cls(result.status)}>{label(result.status)}</strong></div>
