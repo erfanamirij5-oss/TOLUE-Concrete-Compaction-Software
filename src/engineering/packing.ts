@@ -44,6 +44,10 @@ function gradationContinuity(mix: MixDesign) {
   return scores.reduce((sum, value) => sum + value, 0) / scores.length;
 }
 
+function cellKey(position: [number, number, number], cellSize: number) {
+  return `${Math.floor((position[0] + 0.5) / cellSize)}:${Math.floor((position[1] + 0.5) / cellSize)}:${Math.floor((position[2] + 0.5) / cellSize)}`;
+}
+
 export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20260905): PackingResult {
   const random = seededRandom(seed);
   const phases = analysis.materials.filter((m) => ['fine', 'intermediate', 'coarse'].includes(m.phase));
@@ -51,11 +55,13 @@ export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20
 
   phases.forEach((phase, phaseIndex) => {
     const curve = mix.gradations.find((g) => g.materialKey === phase.key);
-    const baseCount = phase.phase === 'coarse' ? 75 : phase.phase === 'intermediate' ? 135 : 260;
-    const count = Math.max(8, Math.round(baseCount * clamp(phase.absoluteVolumeM3 / 0.22, 0.35, 1.65)));
+    const baseCount = phase.phase === 'coarse' ? 520 : phase.phase === 'intermediate' ? 760 : 1450;
+    const count = Math.max(30, Math.round(baseCount * clamp(phase.absoluteVolumeM3 / 0.22, 0.42, 1.55)));
     for (let i = 0; i < count; i += 1) {
       const diameterMm = curve ? sampleDiameterMm(curve, random()) : phase.phase === 'coarse' ? 19 : phase.phase === 'intermediate' ? 9 : 1.2;
-      const radius = clamp(diameterMm / 390, 0.005, 0.058);
+      // Visual radius is close to physical scale in the 1 m specimen, with a small lower bound so fines remain visible.
+      const radius = clamp(diameterMm / 1550, 0.0018, 0.0185);
+      const elongation = 0.90 + random() * 0.20;
       desired.push({
         key: `${phaseIndex}-${i}`,
         materialKey: phase.key,
@@ -64,7 +70,7 @@ export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20
         radius,
         position: [0, 0, 0],
         rotation: [random() * Math.PI, random() * Math.PI, random() * Math.PI],
-        scale: [0.76 + random() * 0.45, 0.76 + random() * 0.42, 0.76 + random() * 0.42],
+        scale: [elongation, 0.92 + random() * 0.16, 0.92 + random() * 0.16],
       });
     }
   });
@@ -72,26 +78,45 @@ export function generatePacking(mix: MixDesign, analysis: MixAnalysis, seed = 20
   desired.sort((a, b) => b.radius - a.radius);
   const particles: PackedParticle[] = [];
   let rejectedPlacements = 0;
+  const cellSize = 0.042;
+  const grid = new Map<string, PackedParticle[]>();
+
+  const neighbors = (position: [number, number, number]) => {
+    const cx = Math.floor((position[0] + 0.5) / cellSize);
+    const cy = Math.floor((position[1] + 0.5) / cellSize);
+    const cz = Math.floor((position[2] + 0.5) / cellSize);
+    const found: PackedParticle[] = [];
+    for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) for (let dz = -1; dz <= 1; dz += 1) {
+      const bucket = grid.get(`${cx + dx}:${cy + dy}:${cz + dz}`);
+      if (bucket) found.push(...bucket);
+    }
+    return found;
+  };
 
   for (const candidate of desired) {
-    const margin = candidate.radius * 1.1;
+    const margin = candidate.radius * 1.04;
     let placed = false;
-    for (let attempt = 0; attempt < 90; attempt += 1) {
+    for (let attempt = 0; attempt < 48; attempt += 1) {
+      // Bias targets slightly toward the lower half to create a more natural packed bed before vibration.
+      const ry = Math.pow(random(), 1.12);
       const position: [number, number, number] = [
         -0.5 + margin + random() * (1 - 2 * margin),
-        -0.5 + margin + random() * (1 - 2 * margin),
+        -0.5 + margin + ry * (1 - 2 * margin),
         -0.5 + margin + random() * (1 - 2 * margin),
       ];
-      const collision = particles.some((other) => {
+      const collision = neighbors(position).some((other) => {
         const dx = position[0] - other.position[0];
         const dy = position[1] - other.position[1];
         const dz = position[2] - other.position[2];
-        const minimum = (candidate.radius + other.radius) * 0.82;
+        const minimum = (candidate.radius + other.radius) * 0.94;
         return dx * dx + dy * dy + dz * dz < minimum * minimum;
       });
       if (!collision) {
         candidate.position = position;
         particles.push(candidate);
+        const key = cellKey(position, cellSize);
+        const bucket = grid.get(key);
+        if (bucket) bucket.push(candidate); else grid.set(key, [candidate]);
         placed = true;
         break;
       }
