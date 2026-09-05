@@ -12,39 +12,44 @@ const LABELS:Record<keyof GradationBlendShares,string>={sand:'ماسه',aggregat
 export function CombinedGradationMini({ mix, analysis }: Props) {
   const result=useMemo(()=>analyzeCombinedGradation(mix,analysis),[mix,analysis]);
   const baseline=useMemo(()=>baselineGradationShares(mix,analysis),[mix,analysis]);
+  const [open,setOpen]=useState(false);
   const [expanded,setExpanded]=useState(false);
-  const [dockTarget,setDockTarget]=useState<Element|null>(null);
+  const [toolTarget,setToolTarget]=useState<Element|null>(null);
   const [preset,setPreset]=useState<GradationEnvelopePreset>('aci-normal');
   const [custom,setCustom]=useState<GradationEnvelopePoint[]>(GRADATION_ENVELOPES['aci-normal'].points.map(p=>({...p})));
   const [blend,setBlend]=useState<GradationBlendShares>(baseline);
-  useEffect(()=>{
-    const metricGrid=document.querySelector('.right-panel .metric-grid');
-    if(!metricGrid)return;
-    const host=document.createElement('div');
-    host.className='combined-gradation-dock-host';
-    host.setAttribute('data-tolue-dock','combined-gradation');
-    metricGrid.insertAdjacentElement('afterend',host);
-    setDockTarget(host);
-    return()=>{setDockTarget(null);host.remove();};
-  },[]);
+  useEffect(()=>{setToolTarget(document.querySelector('.scene-toolstrip'));},[]);
   const lab=useMemo(()=>evaluateGradationDesignLab(mix,analysis,blend),[mix,analysis,blend]);
   const envelope=preset==='custom'?{...GRADATION_ENVELOPES.custom,points:custom}:GRADATION_ENVELOPES[preset];
-  const points=expanded?lab.points:result.points; const maxSieve=points[0]?.sieveMm??25; const minSieve=points[points.length-1]?.sieveMm??0.075;
+  const points=expanded?lab.points:result.points;
+  const maxSieve=points[0]?.sieveMm??25;
+  const minSieve=points[points.length-1]?.sieveMm??0.075;
   const width=280,height=126,px=24,py=16;
   const xOf=(s:number)=>px+((Math.log(s)-Math.log(minSieve))/Math.max(1e-9,Math.log(maxSieve)-Math.log(minSieve)))*(width-px*2);
   const yOf=(p:number)=>py+(1-p/100)*(height-py*2);
   const line=points.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.passingPercent).toFixed(1)}`).join(' ');
   const env=points.map(p=>{const e=interpolateEnvelope(envelope.points,p.sieveMm);return e?{sieveMm:p.sieveMm,lower:e.lower,upper:e.upper}:null}).filter((p):p is GradationEnvelopePoint=>Boolean(p));
-  const upper=env.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.upper).toFixed(1)}`).join(' '); const lower=env.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.lower).toFixed(1)}`).join(' ');
+  const upper=env.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.upper).toFixed(1)}`).join(' ');
+  const lower=env.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.lower).toFixed(1)}`).join(' ');
   const polygon=[...env.map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.upper).toFixed(1)}`),...env.slice().reverse().map(p=>`${xOf(p.sieveMm).toFixed(1)},${yOf(p.lower).toFixed(1)}`)].join(' ');
   const outside=points.filter(p=>{const e=interpolateEnvelope(envelope.points,p.sieveMm);return e&&(p.passingPercent<e.lower||p.passingPercent>e.upper)}).length;
   const choose=(id:GradationEnvelopePreset)=>{if(id==='custom'&&preset!=='custom')setCustom(envelope.points.map(p=>({...p})));setPreset(id)};
   const edit=(i:number,key:'lower'|'upper',value:number)=>setCustom(c=>c.map((p,n)=>n===i?{...p,[key]:Math.max(0,Math.min(100,value))}:p));
   const setShare=(key:keyof GradationBlendShares,value:number)=>setBlend(current=>({...current,[key]:Math.max(0,Math.min(100,value))}));
   const resetBlend=()=>setBlend(baseline);
-  if(!dockTarget&&!expanded)return null;
-  const card=<div className={`combined-mini ${expanded?'combined-mini-expanded':'combined-mini-docked'}`} dir="rtl" role={expanded?'dialog':undefined} aria-modal={expanded?true:undefined}>
-    <div className="combined-mini-head"><div><b>{expanded?'Combined Gradation Design Lab':'منحنی دانه‌بندی کل'}</b><span>{expanded?'طراحی و مقایسه Blend بدون تغییر طرح اصلی':`${envelope.labelFa} • حد بالا/پایین`}</span></div><div className="combined-mini-actions"><strong>{expanded?lab.continuityScore:result.continuityScore}</strong><button onClick={()=>setExpanded(v=>!v)}>{expanded?'بستن آزمایشگاه':'Design Lab'}</button></div></div>
+  const closePanel=()=>{setExpanded(false);setOpen(false)};
+
+  const trigger=toolTarget?createPortal(<button className={`combined-tool ${open?'active':''}`} onClick={()=>{if(open){closePanel()}else{setOpen(true)}}}>دانه‌بندی کل</button>,toolTarget):null;
+  if(!open)return trigger;
+
+  const card=<div className={`combined-mini ${expanded?'combined-mini-expanded':'combined-mini-panel'}`} dir="rtl" role="dialog" aria-modal="true">
+    <div className="combined-mini-head">
+      <div><b>{expanded?'Combined Gradation Design Lab':'منحنی دانه‌بندی کل'}</b><span>{expanded?'طراحی و مقایسه Blend بدون تغییر طرح اصلی':`${envelope.labelFa} • حد بالا/پایین`}</span></div>
+      <div className="combined-mini-head-actions">
+        <div className="combined-mini-actions"><strong>{expanded?lab.continuityScore:result.continuityScore}</strong>{!expanded&&<button onClick={()=>setExpanded(true)}>Design Lab</button>}</div>
+        <button className="panel-close combined-close" onClick={()=>expanded?setExpanded(false):closePanel()} aria-label="بستن">×</button>
+      </div>
+    </div>
     {expanded&&<div className={`gradation-lab-kpis ${lab.level}`}><div><span>Continuity</span><b>{lab.continuityScore}</b></div><div><span>Packing Proxy</span><b>{lab.packingProxyPercent}٪</b></div><div><span>Void Proxy</span><b>{lab.voidProxyPercent}٪</b></div><div><span>Paste Demand</span><b>{lab.pasteDemandIndex}</b></div><div><span>Risk</span><b>{lab.riskScore}</b></div></div>}
     <div className="combined-chart-shell"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="منحنی دانه‌بندی کل و محدوده راهنما">
       {[0,50,100].map(v=><g key={v}><line x1={px} x2={width-px} y1={yOf(v)} y2={yOf(v)} className="combined-mini-grid"/><text x="3" y={yOf(v)+3}>{v}</text></g>)}
@@ -68,5 +73,7 @@ export function CombinedGradationMini({ mix, analysis }: Props) {
       <small className="gradation-lab-note">{lab.noteFa}</small>
     </div>}
   </div>;
-  return createPortal(expanded?<><div className="combined-lab-backdrop" onClick={()=>setExpanded(false)} aria-hidden="true"/>{card}</>:card,expanded?document.body:dockTarget!);
+
+  const modal=<><div className={`combined-lab-backdrop ${expanded?'expanded':''}`} onClick={()=>expanded?setExpanded(false):closePanel()} aria-hidden="true"/>{card}</>;
+  return <>{trigger}{createPortal(modal,document.body)}</>;
 }
