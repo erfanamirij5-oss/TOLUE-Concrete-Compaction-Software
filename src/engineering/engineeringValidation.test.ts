@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { defaultMix } from '../domain/mixDesign';
+import type { RebarNetworkInput } from '../domain/rebarAnalysis';
 import { analyzeMix } from './analyzeMix';
 import { analyzeCombinedGradation } from './combinedGradation';
+import { defaultCompactionPlan, evaluateCompactionPlan } from './compactionPlan';
 import { finalAssessmentLevel } from './finalAssessment';
+import { evaluateLocalRebarRisk } from './localRebarRisk';
 import { generatePacking } from './packing';
 
 describe('TOLUE RC engineering boundary validation', () => {
   const analysis = analyzeMix(defaultMix);
+  const representativeNetwork: RebarNetworkInput = {
+    x: { barDiameterMm: 16, centerSpacingMm: 180 },
+    y: { barDiameterMm: 16, centerSpacingMm: 180 },
+    coverMm: 40,
+    layers: 2,
+    clearLayerSpacingMm: 120,
+    interiorVerticalSpacingMm: 180,
+  };
 
   it('keeps the default mix volumetric closure inside the critical gate boundary', () => {
     expect(Math.abs(analysis.volumeClosureErrorPercent)).toBeLessThanOrEqual(6);
@@ -63,5 +74,51 @@ describe('TOLUE RC engineering boundary validation', () => {
     expect(result.gaps[0].sizeRatio).toBeGreaterThanOrEqual(1.55);
     expect(result.gaps[0].sizeRatio).toBeLessThan(1.85);
     expect(result.gaps[0].retainedPercent).toBeLessThan(4);
+  });
+
+  it('keeps local rebar/Dmax screening deterministic and internally consistent', () => {
+    const result = evaluateLocalRebarRisk(representativeNetwork, 25);
+    expect(result.cells.length).toBeGreaterThan(0);
+    expect(result.criticalCells + result.attentionCells + result.lowRiskCells).toBe(result.cells.length);
+    expect(result.governingOpeningMm).toBeGreaterThan(0);
+    expect(result.governingRatio).toBeGreaterThan(0);
+    expect(result.worstCells.length).toBeLessThanOrEqual(5);
+    expect(result.heuristic).toBe(true);
+  });
+
+  it('escalates local cage risk when Dmax grows against the same opening', () => {
+    const small = evaluateLocalRebarRisk(representativeNetwork, 12.5);
+    const large = evaluateLocalRebarRisk(representativeNetwork, 80);
+    expect(large.governingRatio).toBeLessThan(small.governingRatio);
+    expect(large.criticalCells).toBeGreaterThanOrEqual(small.criticalCells);
+  });
+
+  it('keeps the compaction-plan result finite, bounded and coverage-balanced', () => {
+    const packing = generatePacking(defaultMix, analysis, 20260905);
+    const result = evaluateCompactionPlan(defaultCompactionPlan, representativeNetwork, packing);
+    expect(result.insertions.length).toBeGreaterThan(0);
+    expect(result.coveragePercent).toBeGreaterThanOrEqual(0);
+    expect(result.coveragePercent).toBeLessThanOrEqual(100);
+    expect(result.deadZonePercent).toBeGreaterThanOrEqual(0);
+    expect(result.deadZonePercent).toBeLessThanOrEqual(100);
+    expect(result.coveragePercent + result.deadZonePercent).toBeCloseTo(100, 1);
+    expect(result.accessRiskPercent).toBeGreaterThanOrEqual(0);
+    expect(result.accessRiskPercent).toBeLessThanOrEqual(100);
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.score).toBeLessThanOrEqual(100);
+  });
+
+  it('penalizes a physically inaccessible poker diameter in the compaction plan', () => {
+    const packing = generatePacking(defaultMix, analysis, 20260905);
+    const accessible = evaluateCompactionPlan({ ...defaultCompactionPlan, pokerDiameterMm: 38 }, representativeNetwork, packing);
+    const blockedNetwork: RebarNetworkInput = {
+      ...representativeNetwork,
+      x: { barDiameterMm: 25, centerSpacingMm: 60 },
+      y: { barDiameterMm: 25, centerSpacingMm: 60 },
+      clearLayerSpacingMm: 35,
+    };
+    const blocked = evaluateCompactionPlan({ ...defaultCompactionPlan, pokerDiameterMm: 65 }, blockedNetwork, packing);
+    expect(blocked.accessRiskPercent).toBeGreaterThan(accessible.accessRiskPercent);
+    expect(blocked.score).toBeLessThanOrEqual(accessible.score);
   });
 });
