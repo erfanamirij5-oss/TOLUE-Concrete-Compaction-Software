@@ -23,6 +23,18 @@ describe('TOLUE standards validation gate', () => {
     expect(result.status).toBe('pass');
   });
 
+  it('reports ACI insufficient when required strength or chloride data are missing', () => {
+    const result = evaluateACI31825Compliance(analysis, {
+      classes: ['F0', 'S0', 'W0', 'C2'],
+      nominalMaxAggregateMm: 25,
+      measuredAirPercent: 2,
+      prestressed: false,
+    });
+    expect(result.checks.find(check => check.key === 'fc')?.status).toBe('insufficient');
+    expect(result.checks.find(check => check.key === 'chloride')?.status).toBe('insufficient');
+    expect(result.status).toBe('insufficient');
+  });
+
   it('fails severe ACI F3 when w/cm exceeds the governing limit', () => {
     const result = evaluateACI31825Compliance(analysis, {
       classes: ['F3', 'S0', 'W0', 'C0'],
