@@ -28,7 +28,13 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
-    "icon": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
     "shortDescription": "3D concrete packing and compaction engineering software",
     "longDescription": "TOLUE Concrete Compaction is a project-based 3D engineering platform for concrete mix visualization, packing, compaction analysis, comparison, and standards-based diagnostics."
   }
