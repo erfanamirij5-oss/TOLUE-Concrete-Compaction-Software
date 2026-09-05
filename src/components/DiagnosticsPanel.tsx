@@ -8,26 +8,27 @@ interface Props {
 
 export function DiagnosticsPanel({ title, summary, compact = false }: Props) {
   const visibleItems = compact ? summary.items.slice(0, 3) : summary.items;
-  const status = summary.critical > 0 ? 'CRITICAL' : summary.warnings > 0 ? 'REVIEW' : 'GOOD';
+  const status = summary.critical > 0 ? 'بحرانی' : summary.warnings > 0 ? 'نیازمند بررسی' : 'مناسب';
+  const severityFa = (severity: string) => severity === 'critical' ? 'بحرانی' : severity === 'warning' ? 'هشدار' : 'اطلاع';
 
   return (
-    <section className={`diagnostics-panel ${compact ? 'compact' : ''}`}>
+    <section className={`diagnostics-panel ${compact ? 'compact' : ''}`} dir="rtl">
       <div className="diagnostics-head">
         <div><span>{title}</span><b>{status}</b></div>
         <strong>{summary.score}/100</strong>
       </div>
       <div className="diagnostics-list">
         {visibleItems.length === 0 ? (
-          <div className="diagnostic-empty">No active heuristic warnings in the current rule set.</div>
+          <div className="diagnostic-empty">در مجموعه قواعد فعلی هیچ هشدار مهندسی فعالی وجود ندارد.</div>
         ) : visibleItems.map((item) => (
           <article className={`diagnostic-item severity-${item.severity}`} key={item.id}>
-            <div className="diagnostic-title"><span>{item.severity.toUpperCase()}</span><b>{item.title}</b></div>
+            <div className="diagnostic-title"><span>{severityFa(item.severity)}</span><b>{item.title}</b></div>
             <p>{item.observation}</p>
             {!compact && <>
               <dl>
-                <div><dt>Consequence</dt><dd>{item.consequence}</dd></div>
-                <div><dt>Likely cause</dt><dd>{item.cause}</dd></div>
-                <div><dt>Recommended action</dt><dd>{item.recommendation}</dd></div>
+                <div><dt>پیامد</dt><dd>{item.consequence}</dd></div>
+                <div><dt>علت محتمل</dt><dd>{item.cause}</dd></div>
+                <div><dt>اقدام پیشنهادی</dt><dd>{item.recommendation}</dd></div>
               </dl>
               <div className="diagnostic-evidence">{item.evidence.map((e) => <span key={e}>{e}</span>)}</div>
             </>}
