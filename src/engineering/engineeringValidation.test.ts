@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultMix } from '../domain/mixDesign';
-import type { RebarNetworkInput } from '../domain/rebarAnalysis';
+import { defaultRebarNetwork, type RebarNetworkInput } from '../domain/rebarAnalysis';
 import { analyzeMix } from './analyzeMix';
 import { analyzeCombinedGradation } from './combinedGradation';
 import { defaultCompactionPlan, evaluateCompactionPlan } from './compactionPlan';
@@ -11,6 +11,7 @@ import { generatePacking } from './packing';
 describe('TOLUE RC engineering boundary validation', () => {
   const analysis = analyzeMix(defaultMix);
   const representativeNetwork: RebarNetworkInput = {
+    ...defaultRebarNetwork,
     x: { barDiameterMm: 16, centerSpacingMm: 180 },
     y: { barDiameterMm: 16, centerSpacingMm: 180 },
     coverMm: 40,
