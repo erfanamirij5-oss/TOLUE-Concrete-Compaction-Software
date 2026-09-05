@@ -1,0 +1,22 @@
+.scene-toolstrip{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:8;display:flex;gap:6px;padding:5px;background:#071525e8;border:1px solid #2b4d68;border-radius:9px;box-shadow:0 8px 24px #0007;backdrop-filter:blur(10px)}
+.scene-toolstrip button{border:1px solid #315570;background:#0c2238;color:#d5e2eb;border-radius:6px;padding:7px 12px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap}
+.scene-toolstrip button:hover,.scene-toolstrip button.active{border-color:#f28b2d;background:#2b1e14;color:#ffd3a9}
+.panel-close{display:inline-grid!important;place-items:center;border:1px solid #536b80!important;background:#10253a!important;color:#fff!important;border-radius:6px!important;width:28px!important;height:28px!important;padding:0!important;font-size:18px!important;line-height:1!important;cursor:pointer!important}
+.panel-close:hover{border-color:#f28b2d!important;background:#54270f!important;color:#fff!important}
+.mix-editor-tools,.rebar-head-actions,.layers-head-actions{display:flex;align-items:center;gap:7px}
+.tool-panel-open{z-index:9!important}
+.layers-panel.tool-panel-open{top:54px!important;right:18px!important;bottom:auto!important;max-height:calc(100% - 120px);overflow:auto}
+.heatmap-mini.tool-panel-open{top:54px!important;left:18px!important;right:auto!important;bottom:auto!important;width:310px!important}
+.tool-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rebar-live{top:54px!important;right:18px!important;bottom:auto!important;max-height:calc(100% - 120px);overflow:auto}
+.run-button,.reset-button{width:100%;border-radius:7px;padding:10px 12px;font-size:10px;font-weight:800;cursor:pointer;margin-top:7px}
+.run-button{border:1px solid #d77420;background:linear-gradient(180deg,#ff9a3c,#d96c16);color:#fff;box-shadow:0 5px 16px #f28b2d33}
+.reset-button{border:1px solid #476680;background:#112940;color:#edf5fb}
+.run-button:hover,.reset-button:hover{filter:brightness(1.12)}
+.report-export-cards button,.editor-actions button,.project-actions button{opacity:1!important;color:#fff!important;border:1px solid #41627d!important;background:#12304a!important;font-weight:700!important}
+.report-export-cards button.primary-action,.editor-actions .primary-action,.project-actions .primary-action{background:#e6771f!important;border-color:#ff9d48!important;color:#fff!important}
+.report-export-cards button:hover{border-color:#f28b2d!important;background:#1a4162!important}
+.report-export-cards button:disabled{opacity:.45!important;color:#c7d1da!important;background:#213244!important}
+.diagnostic-item,.diagnostics-panel,.diagnostic-item dt,.diagnostic-item dd,.diagnostic-item p{text-align:right}
+.material-header{text-transform:none!important}
+@media(max-width:1180px){.scene-toolstrip{left:50%;max-width:70%;overflow:auto}.layers-panel.tool-panel-open,.rebar-live{right:10px}.heatmap-mini.tool-panel-open{left:10px}}
