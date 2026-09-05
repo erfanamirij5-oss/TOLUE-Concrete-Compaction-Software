@@ -3,9 +3,10 @@ import type { MixDesign, MaterialKey } from '../domain/mixDesign';
 interface Props {
   mix: MixDesign;
   onChange: (mix: MixDesign) => void;
+  onClose: () => void;
 }
 
-export function MixDesignEditor({ mix, onChange }: Props) {
+export function MixDesignEditor({ mix, onChange, onClose }: Props) {
   const updateMaterial = (key: MaterialKey, field: 'massKgPerM3' | 'densityKgPerM3', value: number) => {
     onChange({
       ...mix,
@@ -16,28 +17,31 @@ export function MixDesignEditor({ mix, onChange }: Props) {
   };
 
   return (
-    <div className="mix-editor">
+    <div className="mix-editor" dir="rtl">
       <div className="editor-heading">
         <div>
-          <span className="eyebrow">MIX DESIGN INPUT</span>
+          <span className="eyebrow">ورودی طرح اختلاط</span>
           <h2>{mix.name}</h2>
         </div>
-        <label className="air-input">
-          <span>Target air %</span>
-          <input
-            type="number"
-            min="0"
-            max="20"
-            step="0.1"
-            value={mix.targetAirPercent}
-            onChange={(event) => onChange({ ...mix, targetAirPercent: Number(event.target.value) })}
-          />
-        </label>
+        <div className="mix-editor-tools">
+          <label className="air-input">
+            <span>هوای هدف ٪</span>
+            <input
+              type="number"
+              min="0"
+              max="20"
+              step="0.1"
+              value={mix.targetAirPercent}
+              onChange={(event) => onChange({ ...mix, targetAirPercent: Number(event.target.value) })}
+            />
+          </label>
+          <button className="panel-close" type="button" aria-label="بستن پنجره" title="بستن" onClick={onClose}>×</button>
+        </div>
       </div>
 
       <div className="material-table">
         <div className="material-row material-header">
-          <span>Material</span><span>kg/m³</span><span>Density kg/m³</span>
+          <span>مصالح</span><span>مقدار kg/m³</span><span>چگالی kg/m³</span>
         </div>
         {mix.materials.map((material) => (
           <div className="material-row" key={material.key}>
