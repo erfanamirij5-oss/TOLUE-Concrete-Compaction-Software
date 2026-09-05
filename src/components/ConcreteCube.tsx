@@ -24,7 +24,7 @@ type LayerVisibility = Record<LayerKey, boolean>;
 type ParticleRiskLevel = BridgeParticleRisk | 'compliance';
 type ToolPanel = 'layers' | 'heatmap' | 'rebar' | null;
 
-const COLORS: Record<Exclude<LayerKey, 'paste'>, string> = { cement:'#7f8790', water:'#2795d9', silicaFume:'#7557a8', admixture:'#35b7a0', air:'#f4f7fb', sand:'#d9b56f', aggregate5to12:'#d97b34', aggregate12to25:'#55677a' };
+const COLORS: Record<Exclude<LayerKey, 'paste'>, string> = { cement:'#a7b0ba', water:'#2f8cff', silicaFume:'#a855f7', admixture:'#00dfa2', air:'#f7fbff', sand:'#ffe45c', aggregate5to12:'#ff7a00', aggregate12to25:'#00f5d4' };
 const LABELS: Record<LayerKey, string> = { cement:'سیمان', water:'آب', silicaFume:'میکروسیلیس', admixture:'افزودنی', air:'حباب هوا', sand:'ماسه', aggregate5to12:'نخودی ۴٫۷۵–۱۲', aggregate12to25:'بادامی ۱۲–۲۵', paste:'پس‌زمینه خمیر' };
 const LAYER_ORDER: LayerKey[] = ['cement','water','silicaFume','admixture','air','sand','aggregate5to12','aggregate12to25','paste'];
 const DEFAULT_OPACITY: LayerOpacity = { cement:1, water:1, silicaFume:1, admixture:1, air:1, sand:1, aggregate5to12:1, aggregate12to25:1, paste:0.65 };
@@ -38,12 +38,16 @@ function SectionPlane({view}:{view:ViewControls}) { if(!view.sectionEnabled)retu
 function AnimatedParticle({particle,compaction,index,total,view,riskLevel,opacity}:{particle:PackingResult['particles'][number];compaction:CompactionState;index:number;total:number;view:ViewControls;riskLevel:ParticleRiskLevel;opacity:number}) {
  const ref=useRef<THREE.Mesh>(null); const materialRef=useRef<THREE.MeshStandardMaterial>(null);
  useFrame(({clock})=>{ if(!ref.current)return; const reveal=revealFactor(index,total,compaction.progress); const wave=Math.sin(clock.elapsedTime*28+index*0.61); const lateral=compaction.lateralVibration*wave*0.7; const settledY=-0.5+(particle.position[1]+0.5)*compaction.settlementFactor; const inletY=0.66+(index%13)*0.012; const inletX=particle.position[0]*0.32; const inletZ=particle.position[2]*0.32; const t=THREE.MathUtils.smoothstep(reveal,0.02,0.92); ref.current.position.set(THREE.MathUtils.lerp(inletX,particle.position[0],t)+lateral,THREE.MathUtils.lerp(inletY,settledY,t),THREE.MathUtils.lerp(inletZ,particle.position[2],t)-lateral*0.45); const scale=0.82+t*0.18; ref.current.scale.set(particle.scale[0]*scale,particle.scale[1]*scale,particle.scale[2]*scale); if(materialRef.current)materialRef.current.opacity=Math.max(0.035,reveal*opacity*(view.ghostMode?0.3:1)); });
- const base=COLORS[particle.materialKey as Exclude<LayerKey,'paste'>]??particle.color;
+ const materialKey=particle.materialKey as Exclude<LayerKey,'paste'>;
+ const base=COLORS[materialKey]??particle.color;
  const critical=riskLevel==='critical'||riskLevel==='compliance';
  const attention=riskLevel==='attention';
+ const isCoarse=materialKey==='aggregate5to12'||materialKey==='aggregate12to25';
  const color=critical?'#ff3347':attention?'#ff8a2d':base;
- const emissive=critical?'#a60018':attention?'#8a3c00':'#000000';
- return <mesh ref={ref} visible={sectionVisible(particle.position,view)} rotation={particle.rotation}><icosahedronGeometry args={[particle.radius,2]}/><meshStandardMaterial ref={materialRef} color={color} emissive={emissive} emissiveIntensity={critical?0.9:attention?0.58:0} roughness={critical||attention?0.46:0.76} transparent opacity={compaction.progress<=0.02?0.08:opacity} depthWrite={opacity>0.65&&!view.ghostMode}/></mesh>;
+ const baseEmissive=materialKey==='aggregate12to25'?'#006f61':materialKey==='aggregate5to12'?'#6f2c00':materialKey==='sand'?'#665500':'#000000';
+ const emissive=critical?'#a60018':attention?'#8a3c00':baseEmissive;
+ const emissiveIntensity=critical?0.9:attention?0.58:materialKey==='aggregate12to25'?0.28:isCoarse?0.20:materialKey==='sand'?0.10:0;
+ return <mesh ref={ref} visible={sectionVisible(particle.position,view)} rotation={particle.rotation}><icosahedronGeometry args={[particle.radius,2]}/><meshStandardMaterial ref={materialRef} color={color} emissive={emissive} emissiveIntensity={emissiveIntensity} roughness={critical||attention?0.46:isCoarse?0.58:0.76} transparent opacity={compaction.progress<=0.02?0.08:opacity} depthWrite={opacity>0.65&&!view.ghostMode}/></mesh>;
 }
 
 function Particles({packing,compaction,view,compliance,visibility,opacity,rebarNetwork}:{packing:PackingResult;compaction:CompactionState;view:ViewControls;compliance?:ComplianceSummary;visibility:LayerVisibility;opacity:LayerOpacity;rebarNetwork:RebarNetworkInput}) {
