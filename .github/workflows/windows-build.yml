@@ -27,6 +27,44 @@ jobs:
         run: npm run tauri icon src-tauri/app-icon.svg
       - name: Build TOLUE Concrete Compaction
         run: npm run desktop:build
+      - name: RC smoke test NSIS install and uninstall
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem 'src-tauri/target/release/bundle/nsis/*-setup.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'NSIS installer not found.' }
+
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "NSIS silent install failed with exit code $($install.ExitCode)." }
+
+          $appExe = Get-ChildItem $env:LOCALAPPDATA -Filter 'TOLUE Concrete Compaction.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $appExe) { throw 'Installed TOLUE executable was not found after NSIS install.' }
+          Write-Host "Installed executable: $($appExe.FullName)"
+
+          $uninstaller = Get-ChildItem $appExe.DirectoryName -Filter 'uninstall.exe' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $uninstaller) { throw 'NSIS uninstaller was not found.' }
+          $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "NSIS silent uninstall failed with exit code $($uninstall.ExitCode)." }
+          Start-Sleep -Seconds 3
+          if (Test-Path $appExe.FullName) { throw 'TOLUE executable still exists after NSIS uninstall.' }
+      - name: RC smoke test MSI install and uninstall
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = Get-ChildItem 'src-tauri/target/release/bundle/msi/*.msi' | Select-Object -First 1
+          if (-not $msi) { throw 'MSI installer not found.' }
+
+          $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$($msi.FullName)`" /quiet /norestart" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "MSI silent install failed with exit code $($install.ExitCode)." }
+
+          $installed = Get-ChildItem 'C:\Program Files','C:\Program Files (x86)',$env:LOCALAPPDATA -Filter 'TOLUE Concrete Compaction.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw 'Installed TOLUE executable was not found after MSI install.' }
+          Write-Host "MSI installed executable: $($installed.FullName)"
+
+          $uninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/x `"$($msi.FullName)`" /quiet /norestart" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "MSI silent uninstall failed with exit code $($uninstall.ExitCode)." }
+          Start-Sleep -Seconds 3
+          if (Test-Path $installed.FullName) { throw 'TOLUE executable still exists after MSI uninstall.' }
       - name: Upload Windows installers
         uses: actions/upload-artifact@v4
         with:
