@@ -4,6 +4,7 @@ import '@fontsource-variable/vazirmatn/wght.css';
 import { App } from './App';
 import './styles.css';
 import './persian.css';
+import './font.css';
 import './heatmap.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
