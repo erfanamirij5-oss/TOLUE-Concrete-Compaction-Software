@@ -34,98 +34,98 @@ export function diagnoseMix(mix: MixDesign, analysis: MixAnalysis, packing: Pack
 
   if (packing.packingDensity < 0.58) {
     items.push({
-      id: 'packing-low', severity: packing.packingDensity < 0.55 ? 'critical' : 'warning', title: 'Low packing density',
-      observation: `Estimated packing density is ${(packing.packingDensity * 100).toFixed(1)}%.`,
-      consequence: 'Higher inter-particle void demand can increase required paste, shrinkage potential and sensitivity to segregation.',
-      cause: 'The current combined grading/fine-coarse balance does not efficiently fill void space in the v1 packing model.',
-      recommendation: 'Improve combined gradation continuity and rebalance fine/intermediate/coarse aggregate fractions before increasing paste.',
-      evidence: [`Void fraction ${(packing.voidFraction * 100).toFixed(1)}%`, `PSD continuity ${(packing.continuityScore * 100).toFixed(0)}%`],
+      id: 'packing-low', severity: packing.packingDensity < 0.55 ? 'critical' : 'warning', title: 'تراکم بسته‌بندی پایین',
+      observation: `چگالی بسته‌بندی برآوردشده ${(packing.packingDensity * 100).toFixed(1)}٪ است.`,
+      consequence: 'فضای خالی بیشتر بین ذرات می‌تواند نیاز به خمیر، پتانسیل جمع‌شدگی و حساسیت به جداشدگی را افزایش دهد.',
+      cause: 'ترکیب فعلی دانه‌بندی و نسبت ریزدانه به درشت‌دانه در مدل بسته‌بندی نسخه فعلی، فضای خالی را به‌صورت مؤثر پر نمی‌کند.',
+      recommendation: 'پیوستگی دانه‌بندی ترکیبی را اصلاح و سهم سنگدانه‌های ریز، میانی و درشت را پیش از افزایش خمیر بازتنظیم کنید.',
+      evidence: [`فضای خالی ${(packing.voidFraction * 100).toFixed(1)}٪`, `پیوستگی دانه‌بندی ${(packing.continuityScore * 100).toFixed(0)}٪`],
     });
   }
 
   if (analysis.wCm > 0.50) {
     items.push({
-      id: 'wcm-high', severity: analysis.wCm > 0.58 ? 'critical' : 'warning', title: 'High water-to-cementitious ratio',
-      observation: `w/cm is ${analysis.wCm.toFixed(3)}.`,
-      consequence: 'May reduce strength and durability and increase bleeding risk, subject to binder system and exposure requirements.',
-      cause: 'Water content is high relative to cement plus silica fume content.',
-      recommendation: 'Reduce free water or increase effective cementitious content only after checking workability and admixture demand.',
-      evidence: [`w/cm ${analysis.wCm.toFixed(3)}`],
+      id: 'wcm-high', severity: analysis.wCm > 0.58 ? 'critical' : 'warning', title: 'نسبت آب به مواد سیمانی بالا',
+      observation: `نسبت آب به مواد سیمانی برابر ${analysis.wCm.toFixed(3)} است.`,
+      consequence: 'ممکن است مقاومت و دوام را کاهش داده و خطر آب‌انداختگی را افزایش دهد؛ نتیجه نهایی به سیستم چسباننده و شرایط محیطی وابسته است.',
+      cause: 'مقدار آب نسبت به مجموع سیمان و میکروسیلیس زیاد است.',
+      recommendation: 'آب آزاد را کاهش دهید یا تنها پس از کنترل کارایی و نیاز افزودنی، مقدار مؤثر مواد سیمانی را اصلاح کنید.',
+      evidence: [`نسبت آب به مواد سیمانی ${analysis.wCm.toFixed(3)}`],
     });
   }
 
   if (pasteFraction < 0.24) {
     items.push({
-      id: 'paste-low', severity: pasteFraction < 0.21 ? 'critical' : 'warning', title: 'Low paste volume',
-      observation: `Paste volume is ${pasteFraction.toFixed(3)} m³/m³.`,
-      consequence: 'Insufficient paste may reduce coating, cohesion and pumpability and make compaction more difficult.',
-      cause: 'Binder + water + liquid admixture absolute volume is low relative to aggregate skeleton demand.',
-      recommendation: 'First improve aggregate packing; if workability remains deficient, increase paste volume strategically rather than water alone.',
-      evidence: [`Paste ${(pasteFraction * 100).toFixed(1)}%`, `Packing ${(packing.packingDensity * 100).toFixed(1)}%`],
+      id: 'paste-low', severity: pasteFraction < 0.21 ? 'critical' : 'warning', title: 'حجم خمیر پایین',
+      observation: `حجم خمیر ${pasteFraction.toFixed(3)} مترمکعب در مترمکعب است.`,
+      consequence: 'خمیر ناکافی می‌تواند پوشش سنگدانه، چسبندگی، پمپ‌پذیری و قابلیت تراکم را کاهش دهد.',
+      cause: 'حجم مطلق سیمان، آب و افزودنی مایع نسبت به نیاز اسکلت سنگدانه پایین است.',
+      recommendation: 'ابتدا بسته‌بندی سنگدانه را بهبود دهید؛ اگر کارایی همچنان ناکافی بود، حجم خمیر را هدفمند افزایش دهید و صرفاً آب اضافه نکنید.',
+      evidence: [`خمیر ${(pasteFraction * 100).toFixed(1)}٪`, `بسته‌بندی ${(packing.packingDensity * 100).toFixed(1)}٪`],
     });
   } else if (pasteFraction > 0.36) {
     items.push({
-      id: 'paste-high', severity: 'warning', title: 'High paste volume',
-      observation: `Paste volume is ${pasteFraction.toFixed(3)} m³/m³.`,
-      consequence: 'Excess paste can increase shrinkage, heat generation and cost without improving aggregate skeleton efficiency.',
-      cause: 'Paste demand appears high relative to the estimated aggregate packing condition.',
-      recommendation: 'Evaluate whether improved combined grading can reduce paste demand while maintaining workability.',
-      evidence: [`Paste ${(pasteFraction * 100).toFixed(1)}%`],
+      id: 'paste-high', severity: 'warning', title: 'حجم خمیر بالا',
+      observation: `حجم خمیر ${pasteFraction.toFixed(3)} مترمکعب در مترمکعب است.`,
+      consequence: 'خمیر بیش‌ازحد می‌تواند جمع‌شدگی، گرمازایی و هزینه را بدون بهبود کارایی اسکلت سنگدانه افزایش دهد.',
+      cause: 'نیاز خمیر نسبت به وضعیت برآوردشده بسته‌بندی سنگدانه زیاد به نظر می‌رسد.',
+      recommendation: 'بررسی کنید آیا با اصلاح دانه‌بندی ترکیبی می‌توان ضمن حفظ کارایی، نیاز خمیر را کاهش داد.',
+      evidence: [`خمیر ${(pasteFraction * 100).toFixed(1)}٪`],
     });
   }
 
   if (fineFraction < 0.32 || fineFraction > 0.52) {
     const low = fineFraction < 0.32;
     items.push({
-      id: 'fine-balance', severity: 'warning', title: low ? 'Low fine-aggregate fraction' : 'High fine-aggregate fraction',
-      observation: `Fine aggregate represents ${(fineFraction * 100).toFixed(1)}% of aggregate absolute volume.`,
-      consequence: low ? 'May reduce cohesion and increase segregation sensitivity.' : 'May increase surface area, water/admixture demand and viscosity.',
-      cause: 'Fine-to-total aggregate balance is outside the current heuristic working band.',
-      recommendation: low ? 'Increase fine fraction or improve intermediate grading continuity.' : 'Reduce excessive fines or increase coarser fractions while preserving continuous grading.',
-      evidence: [`Fine aggregate fraction ${(fineFraction * 100).toFixed(1)}%`],
+      id: 'fine-balance', severity: 'warning', title: low ? 'سهم سنگدانه ریز پایین' : 'سهم سنگدانه ریز بالا',
+      observation: `سنگدانه ریز ${(fineFraction * 100).toFixed(1)}٪ از حجم مطلق کل سنگدانه را تشکیل می‌دهد.`,
+      consequence: low ? 'ممکن است انسجام کاهش یابد و حساسیت به جداشدگی افزایش پیدا کند.' : 'ممکن است سطح ویژه، نیاز آب و افزودنی و ویسکوزیته افزایش پیدا کند.',
+      cause: 'تعادل ریزدانه به کل سنگدانه خارج از محدوده کاری Heuristic فعلی است.',
+      recommendation: low ? 'سهم ریزدانه یا پیوستگی بخش میانی دانه‌بندی را افزایش دهید.' : 'ریزدانه اضافی را کاهش دهید یا سهم درشت‌دانه را با حفظ پیوستگی دانه‌بندی افزایش دهید.',
+      evidence: [`سهم سنگدانه ریز ${(fineFraction * 100).toFixed(1)}٪`],
     });
   }
 
   const invalidGradation = gradations.find((g) => !g.result.valid);
   if (invalidGradation) {
     items.push({
-      id: 'gradation-invalid', severity: 'critical', title: 'Invalid gradation input',
-      observation: `${invalidGradation.curve.label} contains inconsistent sieve/passing data.`,
-      consequence: 'Packing and derived diagnostics are not reliable until PSD input is corrected.',
+      id: 'gradation-invalid', severity: 'critical', title: 'ورودی دانه‌بندی نامعتبر',
+      observation: `${invalidGradation.curve.label} دارای داده ناسازگار الک یا درصد عبوری است.`,
+      consequence: 'تا زمان اصلاح PSD، بسته‌بندی و تشخیص‌های مشتق‌شده قابل اتکا نیستند.',
       cause: invalidGradation.result.errors.join(' '),
-      recommendation: 'Correct sieve ordering and passing percentages before accepting simulation results.',
+      recommendation: 'ترتیب الک‌ها و درصدهای عبوری را پیش از پذیرش نتیجه شبیه‌سازی اصلاح کنید.',
       evidence: invalidGradation.result.errors,
     });
   } else if (packing.continuityScore < 0.55) {
     items.push({
-      id: 'gradation-gap', severity: 'warning', title: 'Weak gradation continuity',
-      observation: `PSD continuity score is ${(packing.continuityScore * 100).toFixed(0)}%.`,
-      consequence: 'Gap-prone grading can increase voids and make the mix more sensitive to paste content and compaction energy.',
-      cause: 'One or more aggregate PSDs provide limited particle-size spread in the current continuity heuristic.',
-      recommendation: 'Blend aggregate fractions to create a smoother combined grading curve and reduce abrupt retained-fraction gaps.',
+      id: 'gradation-gap', severity: 'warning', title: 'پیوستگی ضعیف دانه‌بندی',
+      observation: `امتیاز پیوستگی PSD برابر ${(packing.continuityScore * 100).toFixed(0)}٪ است.`,
+      consequence: 'دانه‌بندی مستعد گپ می‌تواند فضای خالی را افزایش داده و مخلوط را نسبت به حجم خمیر و انرژی تراکم حساس‌تر کند.',
+      cause: 'یک یا چند PSD سنگدانه در Heuristic فعلی گستره محدود اندازه ذرات دارند.',
+      recommendation: 'سهم سنگدانه‌ها را برای ایجاد منحنی ترکیبی نرم‌تر و کاهش جهش‌های درصد مانده بازتنظیم کنید.',
       evidence: gradations.map((g) => `${g.curve.label}: D50 ${g.result.d50?.toFixed(2) ?? '—'} mm`),
     });
   }
 
   if (Math.abs(analysis.volumeClosureErrorPercent) > 3) {
     items.push({
-      id: 'volume-closure', severity: Math.abs(analysis.volumeClosureErrorPercent) > 6 ? 'critical' : 'warning', title: 'Absolute-volume closure error',
-      observation: `Volume closure error is ${analysis.volumeClosureErrorPercent.toFixed(1)}%.`,
-      consequence: 'The entered batch quantities do not reconcile closely to one cubic metre, so downstream volumetric comparisons are distorted.',
-      cause: 'Masses, densities and target air content do not currently close to 1.000 m³.',
-      recommendation: 'Review material densities, moisture/free-water basis and batch masses, then rebalance quantities to close the absolute-volume equation.',
-      evidence: [`Closure error ${analysis.volumeClosureErrorPercent.toFixed(1)}%`],
+      id: 'volume-closure', severity: Math.abs(analysis.volumeClosureErrorPercent) > 6 ? 'critical' : 'warning', title: 'خطای بسته‌شدن حجم مطلق',
+      observation: `خطای بسته‌شدن حجم ${analysis.volumeClosureErrorPercent.toFixed(1)}٪ است.`,
+      consequence: 'مقادیر بچ واردشده با یک مترمکعب تطابق کافی ندارند و مقایسه‌های حجمی بعدی منحرف می‌شوند.',
+      cause: 'جرم‌ها، چگالی‌ها و هوای هدف فعلی معادله حجم مطلق را به ۱٫۰۰۰ مترمکعب نمی‌رسانند.',
+      recommendation: 'چگالی مصالح، مبنای رطوبت و آب آزاد و جرم بچ را بررسی و سپس مقادیر را برای بسته‌شدن معادله حجم مطلق تنظیم کنید.',
+      evidence: [`خطای بسته‌شدن ${analysis.volumeClosureErrorPercent.toFixed(1)}٪`],
     });
   }
 
   if (analysis.wCm > 0.50 && fineFraction < 0.35) {
     items.push({
-      id: 'bleeding-segregation', severity: 'warning', title: 'Bleeding / segregation sensitivity',
-      observation: 'High w/cm coincides with a relatively low fine-aggregate fraction.',
-      consequence: 'The combination can reduce matrix stability and increase free-water migration or coarse-particle settlement.',
-      cause: 'Water demand and skeleton grading are not well balanced for cohesion.',
-      recommendation: 'Improve fines/gradation and use admixture efficiency to reduce free water before increasing binder indiscriminately.',
-      evidence: [`w/cm ${analysis.wCm.toFixed(3)}`, `Fine aggregate ${(fineFraction * 100).toFixed(1)}% of aggregate volume`],
+      id: 'bleeding-segregation', severity: 'warning', title: 'حساسیت به آب‌انداختگی و جداشدگی',
+      observation: 'نسبت آب به مواد سیمانی بالا همزمان با سهم نسبتاً پایین سنگدانه ریز مشاهده شده است.',
+      consequence: 'این ترکیب می‌تواند پایداری ماتریس را کاهش داده و مهاجرت آب آزاد یا نشست ذرات درشت را افزایش دهد.',
+      cause: 'نیاز آب و دانه‌بندی اسکلت برای حفظ انسجام متعادل نیستند.',
+      recommendation: 'ریزدانه و دانه‌بندی را اصلاح کنید و با افزایش بازده افزودنی، آب آزاد را قبل از افزایش غیرهدفمند سیمان کاهش دهید.',
+      evidence: [`نسبت آب به مواد سیمانی ${analysis.wCm.toFixed(3)}`, `سنگدانه ریز ${(fineFraction * 100).toFixed(1)}٪ از حجم سنگدانه`],
     });
   }
 
