@@ -1,0 +1,105 @@
+/* RC manual QA readability pass — tuned from installed Windows screenshots. */
+
+/* 1) Product identity/header: larger and easier to scan */
+.app-shell{grid-template-rows:82px 1fr 32px}
+.topbar{padding:0 26px}
+.brand{font-size:25px!important;line-height:1.05;font-weight:950!important;letter-spacing:.02em!important}
+.brand span{font-size:12px!important;letter-spacing:0!important;margin-right:10px!important;color:#d5e2ec!important}
+.subtitle{font-size:11px!important;line-height:1.6!important;letter-spacing:0!important;color:#91a9bb!important;margin-top:7px!important}
+.topbar-project b{font-size:13px!important;letter-spacing:.04em!important}
+.topbar-project span{font-size:11px!important}
+
+/* 2) Global engineering UI readability floor */
+.panel{padding:18px!important}
+.panel-title{font-size:11px!important;letter-spacing:.04em!important;margin-bottom:14px!important}
+.primary,.run{font-size:12px!important;padding:11px 12px!important}
+.project-mini b,.designer-card b{font-size:12px!important}
+.project-mini span,.project-mini small,.designer-card span,.designer-card small{font-size:10px!important;line-height:1.55!important}
+.mix-nav-list button{padding:10px!important;min-height:44px!important}
+.mix-nav-list button b{font-size:11px!important}.mix-nav-list button span{font-size:9px!important}
+.tree,.tree-button{font-size:11px!important;line-height:1.65!important}
+.status-card{font-size:10px!important;padding:12px!important}.status-card strong{font-size:10px!important}
+.metric{min-height:72px!important;padding:11px!important}.metric span{font-size:10px!important}.metric b{font-size:15px!important}
+.volume-row{font-size:10px!important;padding:8px 0!important}
+.phase-row{font-size:10px!important;padding:7px 0!important}
+.slider-row{font-size:10px!important;grid-template-columns:94px 1fr 54px!important}
+.action-row button,.axis-buttons button,.mix-switch button{font-size:10px!important;padding:9px!important}
+.diagnostics-head span,.diagnostic-item dt,.diagnostic-evidence span{font-size:9px!important}
+.diagnostics-head b,.diagnostic-title b{font-size:11px!important}
+.diagnostic-item p,.diagnostic-item dd{font-size:10px!important;line-height:1.65!important}
+.viewport-toolbar{font-size:10px!important;height:46px!important;padding:0 16px!important;letter-spacing:0!important}
+.viewport-toolbar button{font-size:10px!important;margin-right:14px!important}
+.axis-label{font-size:10px!important}
+
+/* 3) Combined gradation chart: lower, larger typography, less obstruction */
+.combined-mini{top:auto!important;bottom:74px!important;left:18px!important;width:340px!important;max-height:54%!important;padding:13px!important;gap:10px!important;z-index:6!important}
+.combined-mini-expanded{width:430px!important;max-height:70%!important}
+.combined-mini-head b{font-size:13px!important}.combined-mini-head span{font-size:9px!important;line-height:1.5!important}
+.combined-mini-actions strong{font-size:18px!important}.combined-mini-actions button,.combined-presets button,.gradation-lab-title button{font-size:9px!important;padding:7px 9px!important}
+.combined-chart-shell{padding:8px!important}
+.combined-mini svg text{font-size:9px!important;fill:#9ab0c2!important}
+.combined-mini-legend,.combined-mini-foot{font-size:8px!important;line-height:1.5!important}
+.gradation-lab-kpis span,.gradation-lab-title span,.gradation-lab-section p,.gradation-lab-section small,.gradation-lab-note{font-size:8px!important;line-height:1.65!important}
+.gradation-lab-kpis b{font-size:12px!important}.gradation-lab-title b{font-size:10px!important}
+.gradation-blend-row span,.gradation-blend-total,.gradation-select,.combined-envelope-status{font-size:9px!important}
+.gradation-blend-row b{font-size:10px!important}.gradation-select select{font-size:9px!important;padding:7px!important}
+.combined-envelope-editor b,.combined-envelope-editor span{font-size:8px!important}.combined-envelope-editor input{font-size:9px!important;padding:6px!important}
+.viewport-canvas:has(.combined-mini) .health-breakdown{left:auto!important;right:18px!important;bottom:18px!important}
+
+/* 4) Rebar/local risk panel: readable at installed desktop scale */
+.rebar-live,.heatmap-mini.tool-panel-open,.layers-panel.tool-panel-open{font-size:10px!important}
+.rebar-live{width:min(360px,calc(100% - 36px))!important}
+.rebar-live b,.heatmap-mini b{font-size:11px!important}.rebar-live span,.rebar-live small,.heatmap-mini span,.heatmap-mini small{font-size:9px!important;line-height:1.55!important}
+.rebar-live input,.rebar-live select{font-size:10px!important}
+.panel-close{width:34px!important;height:34px!important;font-size:20px!important}
+
+/* 5) Engineering Copilot: remove tiny type and fix low-contrast buttons */
+.ai-review-panel{width:min(1040px,calc(100% - 28px))!important;padding:22px!important;max-height:calc(100% - 64px)!important}
+.ai-review-panel .editor-header b{font-size:17px!important;letter-spacing:0!important}.ai-review-panel .editor-header span{font-size:10px!important;line-height:1.6!important}
+.workflow-kicker{font-size:9px!important;letter-spacing:.06em!important}
+.decision-flow-nav{gap:7px!important;padding:8px!important;background:#081b2c!important;border:1px solid #294a64!important;border-radius:9px!important}
+.decision-flow-nav button,.decision-flow-nav b{font-size:10px!important;min-height:34px!important;padding:7px 11px!important;border:1px solid #345a75!important;background:#0d2940!important;color:#dce9f2!important;border-radius:7px!important;opacity:1!important}
+.decision-flow-nav button.active{background:#3b2414!important;border-color:#f28b2d!important;color:#ffd2a8!important}
+.decision-flow-nav button:disabled{background:#102235!important;border-color:#263f54!important;color:#71889b!important;opacity:.72!important}
+.ai-ready-banner{padding:14px!important;gap:16px!important}.ai-ready-banner b{font-size:13px!important}.ai-ready-banner span{font-size:10px!important;line-height:1.7!important}.ai-ready-banner strong{font-size:28px!important}
+.ai-kpi-grid{gap:9px!important}.ai-kpi-grid>div{padding:12px!important;min-height:72px!important}.ai-kpi-grid span{font-size:9px!important}.ai-kpi-grid b{font-size:16px!important}
+.ai-copilot-dossier{padding:14px!important}.ai-copilot-dossier span{font-size:9px!important}.ai-copilot-dossier strong{font-size:14px!important}.ai-copilot-dossier p,.ai-copilot-dossier li{font-size:11px!important;line-height:1.85!important}
+.ai-review-warning{font-size:10px!important;line-height:1.75!important;padding:11px!important}
+.ai-workflow{gap:8px!important}.ai-step{padding:11px!important}.ai-step b{font-size:11px!important}.ai-step span{font-size:9px!important;line-height:1.5!important}
+.ai-section-head{padding-top:10px!important}.ai-section-head b{font-size:12px!important}.ai-section-head span{font-size:9px!important;line-height:1.55!important}
+.ai-section-head button{border:1px solid #f28b2d!important;background:#322012!important;color:#ffd3aa!important;border-radius:7px!important;padding:8px 12px!important;font-size:10px!important;font-weight:800!important;opacity:1!important;box-shadow:none!important}
+.ai-section-head button:hover{background:#4a2a12!important;color:#fff!important}
+.ai-data-card{padding:12px!important}.ai-data-card pre{font-size:10px!important;line-height:1.75!important}
+.ai-prompt-label>span{font-size:10px!important}.ai-prompt-label small{font-size:9px!important;line-height:1.55!important}.ai-prompt-label textarea{font-size:10px!important;line-height:1.75!important;min-height:300px!important;padding:12px!important}
+.ai-actions button{font-size:10px!important;min-height:40px!important;padding:10px 13px!important}
+.ai-actions .primary-action{background:#e87821!important;border-color:#ff9d4c!important;color:#fff!important}
+.ai-actions .workflow-next{background:#123f32!important;border-color:#3e9b73!important;color:#d9ffeb!important}
+.ai-actions button:disabled{background:#15283a!important;border-color:#30485d!important;color:#71889b!important;opacity:.7!important}
+.ai-image-note{font-size:9px!important;line-height:1.7!important}
+
+/* 6) Compare mode: remove redundant overlays from each miniature 3D viewport and enlarge data table */
+.compare-cubes{gap:12px!important}
+.compare-card{overflow:hidden!important}
+.compare-card .scene-toolstrip,.compare-card .health-orb,.compare-card .health-breakdown,.compare-card .layers-panel,.compare-card .rebar-live,.compare-card .heatmap-mini,.compare-card .combined-mini{display:none!important}
+.compare-head{min-height:50px!important;padding:10px 12px!important;gap:8px!important}.compare-head span{font-size:10px!important}.compare-head b{font-size:12px!important}.compare-head small{font-size:10px!important}
+.compare-card canvas{min-height:330px!important}
+.compare-table{margin-top:12px!important;border-radius:8px!important;overflow:auto!important}
+.compare-row{grid-template-columns:1.4fr 1fr 1fr 1fr!important;min-height:38px!important;padding:8px 10px!important;gap:10px!important}
+.compare-row span,.compare-row b{font-size:10px!important;line-height:1.45!important}
+.compare-header span{font-size:9px!important;font-weight:800!important;color:#a8bfd0!important}
+
+/* 7) Larger readable modal/editor text in general */
+.editor-heading h2{font-size:17px!important}.editor-header b{font-size:14px!important}.editor-header span,.eyebrow{font-size:10px!important}
+.material-name,.material-row input,.air-input,.project-form input,.project-form textarea,.mix-library-row input{font-size:10px!important}
+.material-header,.gradation-tabs button,.gradation-summary b,.gradation-table{font-size:10px!important}.gradation-summary span,.project-form label span{font-size:9px!important}
+
+@media(max-width:1180px){
+  .brand{font-size:22px!important}.subtitle{font-size:10px!important}
+  .combined-mini{width:315px!important;left:12px!important}.combined-mini-expanded{width:390px!important}
+  .ai-review-panel{padding:17px!important}
+}
+@media(max-width:900px){
+  .combined-mini{bottom:60px!important;max-height:48%!important}.combined-mini-expanded{width:calc(100% - 24px)!important;max-height:68%!important}
+  .ai-kpi-grid{grid-template-columns:repeat(2,1fr)!important}
+  .compare-cubes{grid-template-columns:1fr!important}.compare-card canvas{min-height:300px!important}
+}
