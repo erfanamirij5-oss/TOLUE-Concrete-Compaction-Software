@@ -17,7 +17,16 @@ export function CombinedGradationMini({ mix, analysis }: Props) {
   const [preset,setPreset]=useState<GradationEnvelopePreset>('aci-normal');
   const [custom,setCustom]=useState<GradationEnvelopePoint[]>(GRADATION_ENVELOPES['aci-normal'].points.map(p=>({...p})));
   const [blend,setBlend]=useState<GradationBlendShares>(baseline);
-  useEffect(()=>{setDockTarget(document.querySelector('.right-panel .metric-grid'));},[]);
+  useEffect(()=>{
+    const metricGrid=document.querySelector('.right-panel .metric-grid');
+    if(!metricGrid)return;
+    const host=document.createElement('div');
+    host.className='combined-gradation-dock-host';
+    host.setAttribute('data-tolue-dock','combined-gradation');
+    metricGrid.insertAdjacentElement('afterend',host);
+    setDockTarget(host);
+    return()=>{setDockTarget(null);host.remove();};
+  },[]);
   const lab=useMemo(()=>evaluateGradationDesignLab(mix,analysis,blend),[mix,analysis,blend]);
   const envelope=preset==='custom'?{...GRADATION_ENVELOPES.custom,points:custom}:GRADATION_ENVELOPES[preset];
   const points=expanded?lab.points:result.points; const maxSieve=points[0]?.sieveMm??25; const minSieve=points[points.length-1]?.sieveMm??0.075;
