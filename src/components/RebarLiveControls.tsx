@@ -29,7 +29,7 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
   const bridge=analyzeRebarBridgeRisk(packing,network);
   const updateDir=(dir:'x'|'y',key:'barDiameterMm'|'centerSpacingMm',value:number)=>commit({...network,[dir]:{...network[dir],[key]:Math.max(1,value)}});
   return <div className={`rebar-live ${level}`} dir="rtl">
-    <div className="rebar-live-head"><div><b>شبکه آرماتور و تراکم داخلی</b><small>قفس حجمی، شبکه‌های داخلی، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><div className="rebar-head-actions"><button onClick={onToggleVisible}>{visible?'پنهان‌کردن شبکه':'نمایش شبکه'}</button>{onClose&&<button className="panel-close" title="بستن" aria-label="بستن پنل آرماتور" onClick={onClose}>×</button>}</div></div>
+    <div className="rebar-live-head"><div><b>شبکه آرماتور و تراکم داخلی</b><small>قفس حجمی کامل، شبکه‌های داخلی سه‌جهته، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><div className="rebar-head-actions"><button onClick={onToggleVisible}>{visible?'پنهان‌کردن شبکه':'نمایش شبکه'}</button>{onClose&&<button className="panel-close" title="بستن" aria-label="بستن پنل آرماتور" onClick={onClose}>×</button>}</div></div>
     <div className="rebar-live-score"><div><span>عبور سنگدانه</span><strong>{passing}/100</strong></div><div><span>گلوگاه</span><strong>{governing.toFixed(0)} mm</strong></div><div><span>Dmax نماینده</span><strong>{dmax.toFixed(1)} mm</strong></div></div>
     <div className={`rebar-bridge-summary ${bridge.level}`}><div><span>ریسک پل‌زدگی</span><b>{bridge.score}/100</b></div><small>{bridge.candidateSharePercent}٪ ذرات درشت در محدوده حساس • {bridge.criticalSharePercent}٪ بحرانی</small><p>{bridge.messageFa}</p></div>
 
@@ -48,15 +48,15 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
     </section>
 
     <details className="rebar-advanced" open>
-      <summary><span><b>شبکه داخلی سه‌بعدی</b><small>تراکم واقعی‌تر داخل حجم بتن</small></span><i>تنظیمات پیشرفته</i></summary>
+      <summary><span><b>شبکه داخلی سه‌بعدی</b><small>پرکردن حجم با میلگردهای قائم و افقی در هر دو جهت</small></span><i>تنظیمات پیشرفته</i></summary>
       <div className="rebar-toggle-row">
-        <label className="rebar-switch"><input type="checkbox" checked={network.internalGrid!==false} onChange={e=>commit({...network,internalGrid:e.target.checked})}/><span>نمایش میلگردهای داخلی</span></label>
-        <label className="rebar-switch"><input type="checkbox" checked={network.internalTies!==false} onChange={e=>commit({...network,internalTies:e.target.checked})}/><span>نمایش اتصالات داخلی</span></label>
+        <label className="rebar-switch"><input type="checkbox" checked={network.internalGrid!==false} onChange={e=>commit({...network,internalGrid:e.target.checked})}/><span>نمایش شبکه قائم داخلی</span></label>
+        <label className="rebar-switch"><input type="checkbox" checked={network.internalTies!==false} onChange={e=>commit({...network,internalTies:e.target.checked})}/><span>نمایش شبکه افقی داخلی X/Z</span></label>
       </div>
       <div className="rebar-live-grid single-row">
-        <label><span>فاصله میلگردهای قائم داخلی</span><input type="number" min="80" max="600" step="10" value={network.interiorVerticalSpacingMm??300} onChange={e=>commit({...network,interiorVerticalSpacingMm:Math.max(80,Math.min(600,Number(e.target.value)))})}/><i>mm</i></label>
+        <label><span>گام شبکه داخلی سه‌بعدی</span><input type="number" min="80" max="600" step="10" value={network.interiorVerticalSpacingMm??300} onChange={e=>commit({...network,interiorVerticalSpacingMm:Math.max(80,Math.min(600,Number(e.target.value)))})}/><i>mm</i></label>
       </div>
-      <p className="rebar-advanced-note">شبکه داخلی اکنون در کل حجم عضو نمایش داده می‌شود؛ بنابراین ذرات و Heatmap نسبت به قفس داخلی قابل مشاهده‌اند، نه فقط قاب پیرامونی.</p>
+      <p className="rebar-advanced-note">این گام در نمایش سه‌بعدی برای ایجاد میلگردهای قائم و همچنین شبکه‌های افقی داخلی در امتداد X و Z به‌کار می‌رود؛ بنابراین قفس در کل حجم عضو پر می‌شود. این نمایش هندسی نماینده است و دیتیل سازه‌ای اجرایی محسوب نمی‌شود.</p>
     </details>
 
     <p>{ratio<1.25?'گلوگاه به اندازه سنگدانه درشت نزدیک است؛ احتمال پل‌زدگی و محدودیت عبور بالاست.':ratio<1.8?'عبور ممکن است، اما شبکه متراکم است و اجرای تراکم باید کنترل شود.':'فضای عبور هندسی نسبت به Dmax نماینده مناسب ارزیابی می‌شود.'}</p>
