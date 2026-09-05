@@ -23,11 +23,13 @@ jobs:
         run: npm install
       - name: Run engineering validation gate
         run: npm test
+      - name: Run production frontend build gate
+        run: npm run build
       - name: Generate TOLUE desktop icons
         run: npm run tauri icon src-tauri/app-icon.svg
       - name: Build TOLUE Concrete Compaction
         run: npm run desktop:build
-      - name: RC smoke test NSIS install and uninstall
+      - name: RC smoke test NSIS install launch and uninstall
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -41,13 +43,19 @@ jobs:
           if (-not $appExe) { throw 'Installed TOLUE executable was not found after NSIS install.' }
           Write-Host "Installed executable: $($appExe.FullName)"
 
+          $app = Start-Process -FilePath $appExe.FullName -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw "Installed NSIS application exited during launch smoke test with code $($app.ExitCode)." }
+          Stop-Process -Id $app.Id -Force
+          Write-Host 'NSIS installed application launch smoke test passed.'
+
           $uninstaller = Get-ChildItem $appExe.DirectoryName -Filter '*uninstall*.exe' -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $uninstaller) { throw 'NSIS uninstaller was not found.' }
           $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "NSIS silent uninstall failed with exit code $($uninstall.ExitCode)." }
           Start-Sleep -Seconds 3
           if (Test-Path $appExe.FullName) { throw 'TOLUE executable still exists after NSIS uninstall.' }
-      - name: RC smoke test MSI install and uninstall
+      - name: RC smoke test MSI install launch and uninstall
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -60,6 +68,12 @@ jobs:
           $installed = Get-ChildItem 'C:\Program Files','C:\Program Files (x86)',$env:LOCALAPPDATA -Filter 'tolue-concrete-compaction-software.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $installed) { throw 'Installed TOLUE executable was not found after MSI install.' }
           Write-Host "MSI installed executable: $($installed.FullName)"
+
+          $app = Start-Process -FilePath $installed.FullName -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw "Installed MSI application exited during launch smoke test with code $($app.ExitCode)." }
+          Stop-Process -Id $app.Id -Force
+          Write-Host 'MSI installed application launch smoke test passed.'
 
           $uninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/x `"$($msi.FullName)`" /quiet /norestart" -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "MSI silent uninstall failed with exit code $($uninstall.ExitCode)." }
