@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { PackingResult } from '../engineering/packing';
 import type { RebarNetworkInput } from '../domain/rebarAnalysis';
 import { analyzeRebarBridgeRisk } from '../engineering/rebarBridgeRisk';
+import { evaluateLocalRebarRisk } from '../engineering/localRebarRisk';
 import { loadRebarScenario, saveRebarScenario } from '../services/rebarScenarioStore';
 import './RebarLiveControls.css';
 
@@ -27,11 +28,25 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
   const passing=Math.round(clamp((ratio-1)*42+38));
   const level=passing>=75?'good':passing>=50?'attention':'critical';
   const bridge=analyzeRebarBridgeRisk(packing,network);
+  const localRisk=useMemo(()=>evaluateLocalRebarRisk(network,dmax),[network,dmax]);
   const updateDir=(dir:'x'|'y',key:'barDiameterMm'|'centerSpacingMm',value:number)=>commit({...network,[dir]:{...network[dir],[key]:Math.max(1,value)}});
   return <div className={`rebar-live ${level}`} dir="rtl">
-    <div className="rebar-live-head"><div><b>شبکه آرماتور و تراکم داخلی</b><small>قفس حجمی کامل، شبکه‌های داخلی سه‌جهته، گلوگاه، Heatmap و ریسک پل‌زدگی</small></div><div className="rebar-head-actions"><button onClick={onToggleVisible}>{visible?'پنهان‌کردن شبکه':'نمایش شبکه'}</button>{onClose&&<button className="panel-close" title="بستن" aria-label="بستن پنل آرماتور" onClick={onClose}>×</button>}</div></div>
+    <div className="rebar-live-head"><div><b>شبکه آرماتور و تراکم داخلی</b><small>قفس حجمی کامل، تحلیل موضعی Dmax، Heatmap و ریسک پل‌زدگی</small></div><div className="rebar-head-actions"><button onClick={onToggleVisible}>{visible?'پنهان‌کردن شبکه':'نمایش شبکه'}</button>{onClose&&<button className="panel-close" title="بستن" aria-label="بستن پنل آرماتور" onClick={onClose}>×</button>}</div></div>
     <div className="rebar-live-score"><div><span>عبور سنگدانه</span><strong>{passing}/100</strong></div><div><span>گلوگاه</span><strong>{governing.toFixed(0)} mm</strong></div><div><span>Dmax نماینده</span><strong>{dmax.toFixed(1)} mm</strong></div></div>
     <div className={`rebar-bridge-summary ${bridge.level}`}><div><span>ریسک پل‌زدگی</span><b>{bridge.score}/100</b></div><small>{bridge.candidateSharePercent}٪ ذرات درشت در محدوده حساس • {bridge.criticalSharePercent}٪ بحرانی</small><p>{bridge.messageFa}</p></div>
+
+    <section className="rebar-local-risk-card">
+      <div className="rebar-section-title"><b>نقشه ریسک موضعی Dmax / آرماتور</b><span>غربال سلول‌به‌سلول قفس سه‌بعدی</span></div>
+      <div className="rebar-local-kpis">
+        <div><span>کل سلول‌ها</span><b>{localRisk.cells.length}</b></div>
+        <div className="critical"><span>بحرانی</span><b>{localRisk.criticalCells}</b></div>
+        <div className="attention"><span>نیازمند توجه</span><b>{localRisk.attentionCells}</b></div>
+        <div><span>نسبت حاکم</span><b>{localRisk.governingRatio.toFixed(2)}</b></div>
+      </div>
+      <div className="rebar-risk-legend"><span><i className="low"/>کم‌ریسک</span><span><i className="attention"/>توجه</span><span><i className="critical"/>بحرانی</span></div>
+      {localRisk.worstCells.length>0&&<div className="rebar-risk-list">{localRisk.worstCells.slice(0,3).map((cell,index)=><div key={cell.key} className={cell.level}><span className="rank">{index+1}</span><div><b>سلول {cell.index.map(v=>v+1).join('–')}</b><small>فاصله آزاد {cell.clearOpeningMm.toFixed(0)} mm • نسبت به Dmax = {cell.openingToDmaxRatio.toFixed(2)}</small></div><strong>{cell.level==='critical'?'بحرانی':cell.level==='attention'?'توجه':'کم‌ریسک'}</strong></div>)}</div>}
+      <p className="rebar-local-note">در نمای سه‌بعدی، سلول‌های بحرانی با حجم قرمز نیمه‌شفاف و نقاط هشدار با کهربایی مشخص می‌شوند. این آستانه‌ها غربال مهندسی داخلی TOLUE هستند، نه معیار پذیرش آیین‌نامه‌ای.</p>
+    </section>
 
     <section className="rebar-control-section">
       <div className="rebar-section-title"><b>هندسه اصلی</b><span>پارامترهای مؤثر بر فاصله آزاد</span></div>
@@ -60,6 +75,6 @@ export function RebarLiveControls({network,packing,onChange,visible,onToggleVisi
     </details>
 
     <p>{ratio<1.25?'گلوگاه به اندازه سنگدانه درشت نزدیک است؛ احتمال پل‌زدگی و محدودیت عبور بالاست.':ratio<1.8?'عبور ممکن است، اما شبکه متراکم است و اجرای تراکم باید کنترل شود.':'فضای عبور هندسی نسبت به Dmax نماینده مناسب ارزیابی می‌شود.'}</p>
-    <small className="rebar-live-note">سناریوی آرماتور ذخیره می‌شود و همان سناریو در گزارش‌ها و رتبه‌بندی اجرا استفاده خواهد شد. تحلیل پل‌زدگی Heuristic داخلی TOLUE است و جایگزین کنترل سازه‌ای یا مدل DEM نیست.</small>
+    <small className="rebar-live-note">سناریوی آرماتور ذخیره می‌شود و همان سناریو در گزارش‌ها و رتبه‌بندی اجرا استفاده خواهد شد. تحلیل‌های Dmax و پل‌زدگی Heuristic داخلی TOLUE هستند و جایگزین کنترل سازه‌ای یا مدل DEM نیستند.</small>
   </div>;
 }
