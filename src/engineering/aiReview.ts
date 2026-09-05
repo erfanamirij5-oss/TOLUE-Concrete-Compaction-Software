@@ -18,7 +18,7 @@ export function buildAIReviewPrompt(project:ConcreteProject,mix:MixDesign,analys
  const clearX=Math.max(1,rebarNetwork.x.centerSpacingMm-rebarNetwork.x.barDiameterMm),clearZ=Math.max(1,rebarNetwork.y.centerSpacingMm-rebarNetwork.y.barDiameterMm),clearInternal=Math.max(1,(rebarNetwork.interiorVerticalSpacingMm??300)-Math.max(rebarNetwork.x.barDiameterMm,rebarNetwork.y.barDiameterMm));
  const governing=Math.min(clearX,clearZ,clearInternal,rebarNetwork.layers>1?rebarNetwork.clearLayerSpacingMm:Infinity),openingRatio=dmax>0?governing/dmax:99;
  const bridge=analyzeRebarBridgeRisk(packing,rebarNetwork);
- const riskLevel:'کم'|'متوسط'|'زیاد'=bridge.level==='high'||diagnostics.items.some(i=>i.severity==='critical')?'زیاد':bridge.level==='medium'||diagnostics.items.some(i=>i.severity==='warning')?'متوسط':'کم';
+ const riskLevel:'کم'|'متوسط'|'زیاد'=bridge.level==='high'||diagnostics.items.some(i=>i.severity==='critical')?'زیاد':bridge.level==='attention'||diagnostics.items.some(i=>i.severity==='warning')?'متوسط':'کم';
  const priority=bridge.level==='high'?'کنترل گلوگاه آرماتور، Dmax و قابلیت عبور سنگدانه پیش از اصلاح سایر متغیرها':Math.abs(analysis.volumeClosureErrorPercent)>3?'اصلاح بسته‌شدن حجم و کنترل صحت جرم/چگالی مصالح پیش از تفسیر شبیه‌سازی':'بازبینی دانه‌بندی ترکیبی، فضای خالی و نیاز خمیر با Trial Mix کنترل‌شده';
  const trialMix=[`مرحله ۱: متغیر اولویت‌دار — ${priority}.`,`مرحله ۲: فقط یک متغیر مؤثر را تغییر بده و سایر ورودی‌ها را ثابت نگه دار؛ سپس Packing، Void و رفتار بتن تازه را دوباره ثبت کن.`,`مرحله ۳: نتیجه را با طرح پایه مقایسه و فقط در صورت بهبود قابل دفاع وارد مرحله اصلاح بعدی شو.`];
  const materials=mix.materials.map(m=>`• ${m.label}: ${fmt(m.massKgPerM3,1)} kg/m³ | چگالی ورودی: ${fmt(m.densityKgPerM3,0)} kg/m³`).join('\n');
