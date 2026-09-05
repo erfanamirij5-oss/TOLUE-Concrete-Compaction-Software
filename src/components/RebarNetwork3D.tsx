@@ -1,99 +1,21 @@
 import { useMemo } from 'react';
 import type { RebarNetworkInput } from '../domain/rebarAnalysis';
 
-interface Props {
-  network: RebarNetworkInput;
-  visible?: boolean;
-  ghost?: boolean;
-}
-
-function positions(spacingMm: number, coverMm: number, limit = 30) {
-  const spacing = Math.max(0.04, spacingMm / 1000);
-  const cover = Math.max(0.015, Math.min(0.20, coverMm / 1000));
-  const min = -0.5 + cover;
-  const max = 0.5 - cover;
-  const values: number[] = [];
-  for (let value = min; value <= max + 1e-6; value += spacing) values.push(value);
-  if (values.length === 0) return [0];
-  if (values[values.length - 1] < max - spacing * 0.35) values.push(max);
-  return values.slice(0, limit);
-}
-
-function layerLevels(layerCount: number, coverMm: number) {
-  const cover = Math.max(0.015, Math.min(0.20, coverMm / 1000));
-  const min = -0.5 + cover;
-  const max = 0.5 - cover;
-  const count = Math.max(2, Math.min(8, Math.round(layerCount)));
-  if (count === 2) return [min, max];
-  return Array.from({ length: count }, (_, index) => min + ((max - min) * index) / (count - 1));
-}
-
-export function RebarNetwork3D({ network, visible = true, ghost = false }: Props) {
-  const xPositions = useMemo(() => positions(network.x.centerSpacingMm, network.coverMm), [network.x.centerSpacingMm, network.coverMm]);
-  const zPositions = useMemo(() => positions(network.y.centerSpacingMm, network.coverMm), [network.y.centerSpacingMm, network.coverMm]);
-  const yLevels = useMemo(() => layerLevels(network.layers, network.coverMm), [network.layers, network.coverMm]);
-  const internalX = useMemo(() => positions(network.interiorVerticalSpacingMm ?? 300, network.coverMm, 12), [network.interiorVerticalSpacingMm, network.coverMm]);
-  const internalZ = useMemo(() => positions(network.interiorVerticalSpacingMm ?? 300, network.coverMm, 12), [network.interiorVerticalSpacingMm, network.coverMm]);
-  if (!visible) return null;
-
-  const xRadius = Math.max(0.0032, network.x.barDiameterMm / 2000);
-  const zRadius = Math.max(0.0032, network.y.barDiameterMm / 2000);
-  const mainRadius = Math.max(xRadius, zRadius);
-  const tieRadius = Math.max(0.0028, Math.min(xRadius, zRadius) * 0.72);
-  const opacity = ghost ? 0.20 : 0.93;
-  const cover = Math.max(0.015, Math.min(0.20, network.coverMm / 1000));
-  const clear = Math.max(0.15, 1 - cover * 2);
-  const min = -0.5 + cover;
-  const max = 0.5 - cover;
-  const sideXs = [min, max];
-  const sideZs = [min, max];
-  const showInternal = network.internalGrid !== false;
-  const showTies = network.internalTies !== false;
-
-  const steel = (color:string, localOpacity=opacity) => <meshStandardMaterial color={color} metalness={0.82} roughness={0.28} transparent opacity={localOpacity} />;
-
-  return <group>
-    {/* Main horizontal mats, distributed through the full concrete height. */}
-    {yLevels.map((y, matIndex) => <group key={`mat-${matIndex}`}>
-      {zPositions.map((z, index) => <mesh key={`mat-x-${matIndex}-${index}`} position={[0, y, z]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[xRadius, xRadius, clear, 14]} />{steel(matIndex === 0 || matIndex === yLevels.length - 1 ? '#243c50' : '#31566f')}
-      </mesh>)}
-      {xPositions.map((x, index) => <mesh key={`mat-z-${matIndex}-${index}`} position={[x, y + zRadius * 1.35, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[zRadius, zRadius, clear, 14]} />{steel(matIndex === 0 || matIndex === yLevels.length - 1 ? '#35566d' : '#426d89')}
-      </mesh>)}
-    </group>)}
-
-    {/* Perimeter vertical bars retain the exterior cage definition. */}
-    {xPositions.flatMap((x, index) => sideZs.map((z) => <mesh key={`vertical-x-${index}-${z}`} position={[x, 0, z]}>
-      <cylinderGeometry args={[mainRadius, mainRadius, clear, 14]} />{steel('#30495d')}
-    </mesh>))}
-    {zPositions.slice(1,-1).flatMap((z, index) => sideXs.map((x) => <mesh key={`vertical-z-${index}-${x}`} position={[x, 0, z]}>
-      <cylinderGeometry args={[mainRadius, mainRadius, clear, 14]} />{steel('#30495d')}
-    </mesh>))}
-
-    {/* Interior reinforcement connectors: real volumetric grid instead of an empty frame. */}
-    {showInternal && internalX.flatMap((x, xi) => internalZ.map((z, zi) => <mesh key={`internal-v-${xi}-${zi}`} position={[x, 0, z]}>
-      <cylinderGeometry args={[tieRadius, tieRadius, clear, 12]} />{steel('#58778d', ghost ? 0.12 : 0.58)}
-    </mesh>))}
-
-    {/* Secondary internal ties link the volume between the principal mats. */}
-    {showInternal && showTies && yLevels.slice(1, -1).map((y, levelIndex) => <group key={`internal-tie-level-${levelIndex}`}>
-      {internalZ.map((z, index) => <mesh key={`internal-tie-x-${levelIndex}-${index}`} position={[0, y, z]} rotation={[0,0,Math.PI/2]}>
-        <cylinderGeometry args={[tieRadius * 0.9,tieRadius * 0.9,clear,10]} />{steel('#6b879a', ghost ? 0.10 : 0.42)}
-      </mesh>)}
-      {internalX.map((x, index) => <mesh key={`internal-tie-z-${levelIndex}-${index}`} position={[x, y, 0]} rotation={[Math.PI/2,0,0]}>
-        <cylinderGeometry args={[tieRadius * 0.9,tieRadius * 0.9,clear,10]} />{steel('#6b879a', ghost ? 0.10 : 0.42)}
-      </mesh>)}
-    </group>)}
-
-    {/* Perimeter ties remain visible as a spatial reference without dominating the model. */}
-    {showTies && yLevels.map((y, levelIndex) => <group key={`tie-${levelIndex}`}>
-      {sideZs.map((z) => <mesh key={`tie-x-${levelIndex}-${z}`} position={[0, y, z]} rotation={[0,0,Math.PI/2]}>
-        <cylinderGeometry args={[tieRadius,tieRadius,clear,12]} />{steel('#5a7489', ghost ? 0.14 : 0.54)}
-      </mesh>)}
-      {sideXs.map((x) => <mesh key={`tie-z-${levelIndex}-${x}`} position={[x, y, 0]} rotation={[Math.PI/2,0,0]}>
-        <cylinderGeometry args={[tieRadius,tieRadius,clear,12]} />{steel('#5a7489', ghost ? 0.14 : 0.54)}
-      </mesh>)}
-    </group>)}
-  </group>;
+interface Props { network: RebarNetworkInput; visible?: boolean; ghost?: boolean; dmaxMm?: number; showBottlenecks?: boolean; }
+function positions(spacingMm:number,coverMm:number,limit=30){const spacing=Math.max(.04,spacingMm/1000),cover=Math.max(.015,Math.min(.20,coverMm/1000)),min=-.5+cover,max=.5-cover,values:number[]=[];for(let v=min;v<=max+1e-6;v+=spacing)values.push(v);if(!values.length)return[0];if(values[values.length-1]<max-spacing*.35)values.push(max);return values.slice(0,limit)}
+function layerLevels(layerCount:number,coverMm:number){const cover=Math.max(.015,Math.min(.20,coverMm/1000)),min=-.5+cover,max=.5-cover,count=Math.max(2,Math.min(8,Math.round(layerCount)));return count===2?[min,max]:Array.from({length:count},(_,i)=>min+((max-min)*i)/(count-1))}
+export function RebarNetwork3D({network,visible=true,ghost=false,dmaxMm=0,showBottlenecks=true}:Props){
+ const xPositions=useMemo(()=>positions(network.x.centerSpacingMm,network.coverMm),[network.x.centerSpacingMm,network.coverMm]);const zPositions=useMemo(()=>positions(network.y.centerSpacingMm,network.coverMm),[network.y.centerSpacingMm,network.coverMm]);const yLevels=useMemo(()=>layerLevels(network.layers,network.coverMm),[network.layers,network.coverMm]);const internalX=useMemo(()=>positions(network.interiorVerticalSpacingMm??300,network.coverMm,12),[network.interiorVerticalSpacingMm,network.coverMm]);const internalZ=useMemo(()=>positions(network.interiorVerticalSpacingMm??300,network.coverMm,12),[network.interiorVerticalSpacingMm,network.coverMm]);if(!visible)return null;
+ const xRadius=Math.max(.0032,network.x.barDiameterMm/2000),zRadius=Math.max(.0032,network.y.barDiameterMm/2000),mainRadius=Math.max(xRadius,zRadius),tieRadius=Math.max(.0028,Math.min(xRadius,zRadius)*.72),opacity=ghost?.20:.93,cover=Math.max(.015,Math.min(.20,network.coverMm/1000)),clear=Math.max(.15,1-cover*2),min=-.5+cover,max=.5-cover,sideXs=[min,max],sideZs=[min,max],showInternal=network.internalGrid!==false,showTies=network.internalTies!==false;
+ const steel=(color:string,localOpacity=opacity)=><meshStandardMaterial color={color} metalness={.82} roughness={.28} transparent opacity={localOpacity}/>;
+ const clearX=Math.max(1,network.x.centerSpacingMm-network.x.barDiameterMm),clearZ=Math.max(1,network.y.centerSpacingMm-network.y.barDiameterMm),clearInternal=Math.max(1,(network.interiorVerticalSpacingMm??300)-Math.max(network.x.barDiameterMm,network.y.barDiameterMm));const governing=Math.min(clearX,clearZ,clearInternal,network.layers>1?network.clearLayerSpacingMm:Infinity);const ratio=dmaxMm>0?governing/dmaxMm:99;const risk=ratio<1.25?'critical':ratio<1.8?'attention':'good';const riskColor=risk==='critical'?'#ff1744':risk==='attention'?'#ffb000':'#39ff88';
+ const bottlenecks=showInternal&&showBottlenecks&&dmaxMm>0&&risk!=='good'?internalX.flatMap((x,xi)=>internalZ.map((z,zi)=>({key:`${xi}-${zi}`,x,z}))):[];
+ return <group>
+  {yLevels.map((y,mi)=><group key={`mat-${mi}`}>{zPositions.map((z,i)=><mesh key={`mx-${mi}-${i}`} position={[0,y,z]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[xRadius,xRadius,clear,14]}/>{steel(mi===0||mi===yLevels.length-1?'#243c50':'#31566f')}</mesh>)}{xPositions.map((x,i)=><mesh key={`mz-${mi}-${i}`} position={[x,y+zRadius*1.35,0]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[zRadius,zRadius,clear,14]}/>{steel(mi===0||mi===yLevels.length-1?'#35566d':'#426d89')}</mesh>)}</group>)}
+  {xPositions.flatMap((x,i)=>sideZs.map(z=><mesh key={`vx-${i}-${z}`} position={[x,0,z]}><cylinderGeometry args={[mainRadius,mainRadius,clear,14]}/>{steel('#30495d')}</mesh>))}{zPositions.slice(1,-1).flatMap((z,i)=>sideXs.map(x=><mesh key={`vz-${i}-${x}`} position={[x,0,z]}><cylinderGeometry args={[mainRadius,mainRadius,clear,14]}/>{steel('#30495d')}</mesh>))}
+  {showInternal&&internalX.flatMap((x,xi)=>internalZ.map((z,zi)=><mesh key={`iv-${xi}-${zi}`} position={[x,0,z]}><cylinderGeometry args={[tieRadius,tieRadius,clear,12]}/>{steel('#58778d',ghost?.12:.58)}</mesh>))}
+  {showInternal&&showTies&&yLevels.slice(1,-1).map((y,li)=><group key={`itl-${li}`}>{internalZ.map((z,i)=><mesh key={`itx-${li}-${i}`} position={[0,y,z]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[tieRadius*.9,tieRadius*.9,clear,10]}/>{steel('#6b879a',ghost?.10:.42)}</mesh>)}{internalX.map((x,i)=><mesh key={`itz-${li}-${i}`} position={[x,y,0]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[tieRadius*.9,tieRadius*.9,clear,10]}/>{steel('#6b879a',ghost?.10:.42)}</mesh>)}</group>)}
+  {showTies&&yLevels.map((y,li)=><group key={`tie-${li}`}>{sideZs.map(z=><mesh key={`tx-${li}-${z}`} position={[0,y,z]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[tieRadius,tieRadius,clear,12]}/>{steel('#5a7489',ghost?.14:.54)}</mesh>)}{sideXs.map(x=><mesh key={`tz-${li}-${x}`} position={[x,y,0]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[tieRadius,tieRadius,clear,12]}/>{steel('#5a7489',ghost?.14:.54)}</mesh>)}</group>)}
+  {bottlenecks.map((p,i)=><group key={`bn-${p.key}`} position={[p.x,0,p.z]}><mesh><sphereGeometry args={[risk==='critical'?.018:.014,10,8]}/><meshBasicMaterial color={riskColor} transparent opacity={ghost?.28:.88}/></mesh>{i%2===0&&<mesh><cylinderGeometry args={[.004,.004,clear*.88,8]}/><meshBasicMaterial color={riskColor} transparent opacity={ghost?.12:.34}/></mesh>}</group>)}
+ </group>;
 }
