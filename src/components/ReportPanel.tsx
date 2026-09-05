@@ -21,13 +21,8 @@ interface Props {
   onClose: () => void;
 }
 
-async function printCurrentReportToPdf() {
-  try {
-    const { getCurrentWebview } = await import('@tauri-apps/api/webview');
-    await getCurrentWebview().print();
-  } catch {
-    window.print();
-  }
+function printCurrentReportToPdf() {
+  window.print();
 }
 
 export function ReportPanel(props: Props) {
@@ -55,6 +50,6 @@ export function ReportPanel(props: Props) {
       <article><b>تصویر سه‌بعدی / مقطع</b><p>نمای فعلی Three.js را به PNG تبدیل می‌کند. در حالت مقایسه، هر نمونه به‌صورت تصویر جداگانه خروجی می‌شود.</p><button onClick={() => downloadSnapshot(`${props.project.metadata.projectNumber}-${props.mix.name}`)}>خروجی PNG</button></article>
       <article><b>بسته تحلیل هوش مصنوعی</b><p>فایل JSON شامل ورودی کامل طرح، نمره نهایی، شاخص‌های مهندسی، هشدارها، هویت محصول، Prompt و تصاویر فعلی ایجاد می‌شود.</p><button onClick={() => exportAIAnalysisPackage(context)}>خروجی بسته AI</button></article>
     </div>
-    <div className="ai-review-warning">سناریوی آرماتور در تحلیل سه‌بعدی ذخیره می‌شود و همین سناریو در نمره قابلیت اجرا و خروجی‌های آرماتور استفاده می‌شود. دکمه «چاپ / ذخیره PDF همین طرح» پنجره چاپ بومی ویندوز را باز می‌کند؛ کاربر می‌تواند Microsoft Print to PDF یا چاپگر فیزیکی را انتخاب کند. کنترل ACI 318-25 و ASTM C33/C33M از شاخص‌های Heuristic داخلی TOLUE جدا هستند.</div>
+    <div className="ai-review-warning">سناریوی آرماتور در تحلیل سه‌بعدی ذخیره می‌شود و همین سناریو در نمره قابلیت اجرا و خروجی‌های آرماتور استفاده می‌شود. دکمه «چاپ / ذخیره PDF همین طرح» پنجره چاپ WebView ویندوز را باز می‌کند؛ کاربر می‌تواند Microsoft Print to PDF یا چاپگر فیزیکی را انتخاب کند. کنترل ACI 318-25 و ASTM C33/C33M از شاخص‌های Heuristic داخلی TOLUE جدا هستند.</div>
   </div>;
 }
