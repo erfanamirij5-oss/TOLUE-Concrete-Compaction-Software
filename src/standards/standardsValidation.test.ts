@@ -25,7 +25,7 @@ describe('TOLUE standards validation gate', () => {
 
   it('reports ACI insufficient when required strength or chloride data are missing', () => {
     const result = evaluateACI31825Compliance(analysis, {
-      classes: ['F0', 'S0', 'W0', 'C2'],
+      classes: ['F0', 'S0', 'W0', 'C1'],
       nominalMaxAggregateMm: 25,
       measuredAirPercent: 2,
       prestressed: false,
