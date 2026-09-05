@@ -8,7 +8,7 @@ interface Props {
 }
 
 function positions(spacingMm: number, coverMm: number) {
-  const spacing = Math.max(0.03, spacingMm / 1000);
+  const spacing = Math.max(0.04, spacingMm / 1000);
   const cover = Math.max(0.015, Math.min(0.20, coverMm / 1000));
   const min = -0.5 + cover;
   const max = 0.5 - cover;
@@ -16,53 +16,67 @@ function positions(spacingMm: number, coverMm: number) {
   for (let value = min; value <= max + 1e-6; value += spacing) values.push(value);
   if (values.length === 0) return [0];
   if (values[values.length - 1] < max - spacing * 0.35) values.push(max);
-  return values.slice(0, 32);
+  return values.slice(0, 30);
 }
 
-function matElevations(network: RebarNetworkInput) {
-  const cover = Math.max(0.015, Math.min(0.20, network.coverMm / 1000));
-  const bottom = -0.5 + cover;
-  const top = 0.5 - cover;
-  const requested = Math.max(2, Math.min(6, network.layers));
-  if (requested === 2) return [bottom, top];
-  return Array.from({ length: requested }, (_, index) => bottom + ((top - bottom) * index) / (requested - 1));
+function verticalLevels(spacingMm: number, coverMm: number) {
+  const spacing = Math.max(0.08, spacingMm / 1000);
+  const cover = Math.max(0.015, Math.min(0.20, coverMm / 1000));
+  const min = -0.5 + cover;
+  const max = 0.5 - cover;
+  const values: number[] = [];
+  for (let value = min; value <= max + 1e-6; value += spacing) values.push(value);
+  if (values[values.length - 1] < max - spacing * 0.4) values.push(max);
+  return values.slice(0, 14);
 }
 
 export function RebarNetwork3D({ network, visible = true, ghost = false }: Props) {
-  const xBarZ = useMemo(() => positions(network.x.centerSpacingMm, network.coverMm), [network.x.centerSpacingMm, network.coverMm]);
-  const yBarX = useMemo(() => positions(network.y.centerSpacingMm, network.coverMm), [network.y.centerSpacingMm, network.coverMm]);
-  const mats = useMemo(() => matElevations(network), [network]);
+  const xPositions = useMemo(() => positions(network.x.centerSpacingMm, network.coverMm), [network.x.centerSpacingMm, network.coverMm]);
+  const zPositions = useMemo(() => positions(network.y.centerSpacingMm, network.coverMm), [network.y.centerSpacingMm, network.coverMm]);
+  const yLevels = useMemo(() => verticalLevels(Math.min(network.x.centerSpacingMm, network.y.centerSpacingMm), network.coverMm), [network.x.centerSpacingMm, network.y.centerSpacingMm, network.coverMm]);
   if (!visible) return null;
 
-  const xRadius = Math.max(0.003, network.x.barDiameterMm / 2000);
-  const yRadius = Math.max(0.003, network.y.barDiameterMm / 2000);
-  const opacity = ghost ? 0.22 : 0.88;
+  const xRadius = Math.max(0.0032, network.x.barDiameterMm / 2000);
+  const zRadius = Math.max(0.0032, network.y.barDiameterMm / 2000);
+  const mainRadius = Math.max(xRadius, zRadius);
+  const tieRadius = Math.max(0.0028, Math.min(xRadius, zRadius) * 0.78);
+  const opacity = ghost ? 0.22 : 0.92;
   const cover = Math.max(0.015, Math.min(0.20, network.coverMm / 1000));
-  const clearLength = Math.max(0.15, 1 - cover * 2);
-  const clearHeight = Math.max(0.15, 1 - cover * 2);
-  const edgeX = [-0.5 + cover, 0.5 - cover];
-  const edgeZ = [-0.5 + cover, 0.5 - cover];
+  const clear = Math.max(0.15, 1 - cover * 2);
+  const min = -0.5 + cover;
+  const max = 0.5 - cover;
+  const sideXs = [min, max];
+  const sideZs = [min, max];
+
+  const steel = (color:string, localOpacity=opacity) => <meshStandardMaterial color={color} metalness={0.82} roughness={0.28} transparent opacity={localOpacity} />;
 
   return <group>
-    {mats.map((y, matIndex) => <group key={`foundation-mat-${matIndex}`} position={[0, y, 0]}>
-      {xBarZ.map((z, index) => <mesh key={`x-${matIndex}-${index}`} position={[0, 0, z]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[xRadius, xRadius, clearLength, 12]} />
-        <meshStandardMaterial color="#34495e" metalness={0.72} roughness={0.38} transparent opacity={opacity} />
+    {/* Bottom and top mats across the complete 1 m specimen. */}
+    {[min, max].map((y, matIndex) => <group key={`mat-${matIndex}`}>
+      {zPositions.map((z, index) => <mesh key={`mat-x-${matIndex}-${index}`} position={[0, y, z]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[xRadius, xRadius, clear, 14]} />{steel('#263d50')}
       </mesh>)}
-      {yBarX.map((x, index) => <mesh key={`z-${matIndex}-${index}`} position={[x, yRadius * 1.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[yRadius, yRadius, clearLength, 12]} />
-        <meshStandardMaterial color="#526b82" metalness={0.72} roughness={0.38} transparent opacity={opacity} />
+      {xPositions.map((x, index) => <mesh key={`mat-z-${matIndex}-${index}`} position={[x, y + zRadius * 1.35, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[zRadius, zRadius, clear, 14]} />{steel('#344f65')}
       </mesh>)}
     </group>)}
 
-    {edgeX.flatMap((x) => edgeZ.map((z) => <mesh key={`corner-${x}-${z}`} position={[x, 0, z]}>
-      <cylinderGeometry args={[Math.max(xRadius, yRadius), Math.max(xRadius, yRadius), clearHeight, 12]} />
-      <meshStandardMaterial color="#405b72" metalness={0.74} roughness={0.36} transparent opacity={opacity} />
+    {/* Vertical bars distributed along all four faces, not only at the corners. */}
+    {xPositions.flatMap((x, index) => sideZs.map((z) => <mesh key={`vertical-x-${index}-${z}`} position={[x, 0, z]}>
+      <cylinderGeometry args={[mainRadius, mainRadius, clear, 14]} />{steel('#30495d')}
+    </mesh>))}
+    {zPositions.slice(1,-1).flatMap((z, index) => sideXs.map((x) => <mesh key={`vertical-z-${index}-${x}`} position={[x, 0, z]}>
+      <cylinderGeometry args={[mainRadius, mainRadius, clear, 14]} />{steel('#30495d')}
     </mesh>))}
 
-    {xBarZ.filter((_, i) => i % 2 === 0).flatMap((z) => edgeX.map((x) => <mesh key={`edge-x-${x}-${z}`} position={[x, 0, z]}>
-      <cylinderGeometry args={[Math.min(xRadius, yRadius), Math.min(xRadius, yRadius), clearHeight, 10]} />
-      <meshStandardMaterial color="#405b72" metalness={0.7} roughness={0.42} transparent opacity={ghost ? 0.14 : 0.5} />
-    </mesh>))}
+    {/* Horizontal perimeter ties from bottom to top so the cage reads as a complete foundation cage. */}
+    {yLevels.map((y, levelIndex) => <group key={`tie-${levelIndex}`}>
+      {sideZs.map((z) => <mesh key={`tie-x-${levelIndex}-${z}`} position={[0, y, z]} rotation={[0,0,Math.PI/2]}>
+        <cylinderGeometry args={[tieRadius,tieRadius,clear,12]} />{steel('#5a7489', ghost ? 0.16 : 0.68)}
+      </mesh>)}
+      {sideXs.map((x) => <mesh key={`tie-z-${levelIndex}-${x}`} position={[x, y, 0]} rotation={[Math.PI/2,0,0]}>
+        <cylinderGeometry args={[tieRadius,tieRadius,clear,12]} />{steel('#5a7489', ghost ? 0.16 : 0.68)}
+      </mesh>)}
+    </group>)}
   </group>;
 }
